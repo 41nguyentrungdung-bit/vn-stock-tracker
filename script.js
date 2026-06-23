@@ -9,6 +9,11 @@ const chartCanvas = document.getElementById("priceChart");
 const rsiCanvas = document.getElementById("rsiChart");
 const macdCanvas = document.getElementById("macdChart");
 const quickSymbols = document.querySelector(".quick-symbols");
+const tabs = document.querySelectorAll(".tab");
+const tabPanels = {
+  overview: document.getElementById("overviewPanel"),
+  score: document.getElementById("scorePanel")
+};
 
 const fields = {
   lastUpdated: document.getElementById("lastUpdated"),
@@ -56,6 +61,19 @@ let latestPayload = null;
 
 function setMessage(text) {
   message.textContent = text;
+}
+
+function setActiveTab(name) {
+  tabs.forEach((tab) => {
+    const isActive = tab.dataset.tab === name;
+    tab.classList.toggle("active", isActive);
+    tab.setAttribute("aria-selected", String(isActive));
+  });
+
+  Object.entries(tabPanels).forEach(([panelName, panel]) => {
+    panel.hidden = panelName !== name;
+    panel.classList.toggle("active", panelName === name);
+  });
 }
 
 function safeText(value) {
@@ -549,14 +567,10 @@ function renderInvestorFlow() {
   fields.flowStatus.textContent = "Yahoo Finance khong co du lieu nay";
 }
 
-function renderHistory(bars, indicators, movingAverages) {
+function renderHistory(bars, indicators) {
   const rows = bars
     .map((bar, index) => ({
       ...bar,
-      ma10: movingAverages.ma10[index],
-      ma50: movingAverages.ma50[index],
-      ma100: movingAverages.ma100[index],
-      ma200: movingAverages.ma200[index],
       rsi: indicators.rsi[index],
       macd: indicators.macd.macd[index]
     }))
@@ -572,10 +586,6 @@ function renderHistory(bars, indicators, movingAverages) {
       <td>${formatPrice(row.low)}</td>
       <td>${formatPrice(row.close)}</td>
       <td>${formatInteger(row.volume)}</td>
-      <td>${formatOptional(row.ma10, 2)}</td>
-      <td>${formatOptional(row.ma50, 2)}</td>
-      <td>${formatOptional(row.ma100, 2)}</td>
-      <td>${formatOptional(row.ma200, 2)}</td>
       <td>${formatOptional(row.rsi, 2)}</td>
       <td>${formatOptional(row.macd, 2)}</td>
     </tr>
@@ -647,7 +657,7 @@ function fillData(symbol, quote, overview, bars) {
   const movingAverages = renderMovingAverages(bars);
   const indicators = renderIndicators(bars);
   renderInvestorFlow();
-  renderHistory(bars, indicators, movingAverages);
+  renderHistory(bars, indicators);
   fields.chartRange.textContent = `${bars.length} phien gan nhat`;
 }
 
@@ -725,6 +735,10 @@ quickSymbols.addEventListener("click", (event) => {
   if (!button) return;
   symbolInput.value = button.dataset.symbol;
   form.requestSubmit();
+});
+
+tabs.forEach((tab) => {
+  tab.addEventListener("click", () => setActiveTab(tab.dataset.tab));
 });
 
 copyButton.addEventListener("click", async () => {

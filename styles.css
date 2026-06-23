@@ -87,12 +87,39 @@ h1 {
 }
 
 .search-panel,
+.tabs,
 .quote-card,
 .metrics-grid,
 .chart-section,
 .details-grid,
 .raw-section {
   margin: 18px 24px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  padding: 0 18px;
+  background: #ffffff;
+  color: var(--muted);
+}
+
+.tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.tab-panel[hidden] {
+  display: none;
 }
 
 .search-panel {
@@ -321,6 +348,30 @@ canvas {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.ma-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.ma-summary article {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff7ed;
+}
+
+.ma-summary span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+}
+
+.ma-summary strong {
+  font-size: 18px;
+}
+
 .chart-legend {
   display: flex;
   flex-wrap: wrap;
@@ -378,7 +429,7 @@ canvas {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1120px;
+  min-width: 820px;
   background: #ffffff;
 }
 
@@ -403,6 +454,28 @@ th {
 
 tr:last-child td {
   border-bottom: 0;
+}
+
+.score-section {
+  margin: 18px 24px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.score-table {
+  min-width: 420px;
+}
+
+.score-table td:last-child,
+.score-table th:last-child {
+  text-align: right;
+  width: 120px;
+}
+
+.total-row td {
+  background: var(--soft);
+  font-weight: 800;
 }
 
 .details-grid {
@@ -478,6 +551,10 @@ pre {
   .ma-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .ma-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 520px) {
@@ -498,6 +575,12 @@ pre {
     margin-right: 14px;
   }
 
+  .tabs,
+  .score-section {
+    margin-left: 14px;
+    margin-right: 14px;
+  }
+
   .metrics-grid {
     grid-template-columns: 1fr;
   }
@@ -507,6 +590,10 @@ pre {
   }
 
   .ma-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ma-summary {
     grid-template-columns: 1fr;
   }
 
