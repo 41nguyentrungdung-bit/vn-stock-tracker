@@ -45,6 +45,12 @@ const fields = {
   beta: document.getElementById("beta"),
   rsiValue: document.getElementById("rsiValue"),
   macdValue: document.getElementById("macdValue"),
+  change3: document.getElementById("change3"),
+  change7: document.getElementById("change7"),
+  change10: document.getElementById("change10"),
+  change14: document.getElementById("change14"),
+  change21: document.getElementById("change21"),
+  change30: document.getElementById("change30"),
   foreignBuy: document.getElementById("foreignBuy"),
   foreignSell: document.getElementById("foreignSell"),
   foreignNet: document.getElementById("foreignNet"),
@@ -114,6 +120,12 @@ function formatPercent(value) {
     maximumFractionDigits: 2,
     minimumFractionDigits: 2
   })}%`;
+}
+
+function valueClass(value) {
+  const number = toNumber(value);
+  if (number === null || number === 0) return "";
+  return number > 0 ? "positive" : "negative";
 }
 
 function formatLargeNumber(value) {
@@ -567,13 +579,13 @@ function renderInvestorFlow() {
   fields.flowStatus.textContent = "Yahoo Finance khong co du lieu nay";
 }
 
-function renderHistory(bars, indicators) {
+function renderHistory(bars) {
   const rows = bars
-    .map((bar, index) => ({
-      ...bar,
-      rsi: indicators.rsi[index],
-      macd: indicators.macd.macd[index]
-    }))
+    .map((bar, index) => {
+      const previousClose = index > 0 ? bars[index - 1].close : null;
+      const changePercent = previousClose ? ((bar.close - previousClose) / previousClose) * 100 : null;
+      return { ...bar, changePercent };
+    })
     .slice(-60)
     .reverse();
 
@@ -584,12 +596,26 @@ function renderHistory(bars, indicators) {
       <td>${formatPrice(row.open)}</td>
       <td>${formatPrice(row.high)}</td>
       <td>${formatPrice(row.low)}</td>
-      <td>${formatPrice(row.close)}</td>
+      <td class="${valueClass(row.changePercent)}">${formatPrice(row.close)}</td>
+      <td class="${valueClass(row.changePercent)}">${formatPercent(row.changePercent)}</td>
       <td>${formatInteger(row.volume)}</td>
-      <td>${formatOptional(row.rsi, 2)}</td>
-      <td>${formatOptional(row.macd, 2)}</td>
     </tr>
   `).join("");
+}
+
+function renderPriceChanges(bars) {
+  const latest = bars[bars.length - 1]?.close;
+  const periods = [3, 7, 10, 14, 21, 30];
+
+  periods.forEach((period) => {
+    const target = fields[`change${period}`];
+    const compare = bars[bars.length - 1 - period]?.close;
+    const change = latest && compare ? ((latest - compare) / compare) * 100 : null;
+    target.textContent = formatPercent(change);
+    target.classList.remove("positive", "negative");
+    const className = valueClass(change);
+    if (className) target.classList.add(className);
+  });
 }
 
 function updatePriceColor(price, reference, target) {
@@ -656,8 +682,9 @@ function fillData(symbol, quote, overview, bars) {
   drawChart(bars);
   const movingAverages = renderMovingAverages(bars);
   const indicators = renderIndicators(bars);
+  renderPriceChanges(bars);
   renderInvestorFlow();
-  renderHistory(bars, indicators);
+  renderHistory(bars);
   fields.chartRange.textContent = `${bars.length} phien gan nhat`;
 }
 
