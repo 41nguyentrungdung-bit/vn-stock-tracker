@@ -32,6 +32,7 @@ Khong can Alpha Vantage API key. App lay du lieu gia tu Yahoo Finance qua proxy 
 
 - Gia hien tai, bien dong, khoi luong va bieu do gia dong cua.
 - Dong truoc la gia dong cua cua phien lien truoc, dung lam moc tinh tang/giam.
+- Gia tran/san duoc tinh tu Dong truoc theo bien do HOSE 7%, HNX 10%, UPCOM 15% va lam tron theo buoc gia.
 - MA 10, MA 50, MA 100, MA 200 tinh tu gia dong cua, hien thi ngay duoi bieu do gia va ve tren bieu do.
 - RSI 14 tinh tu du lieu lich su gia dong cua.
 - MACD 12, 26, 9 tinh tu du lieu lich su gia dong cua.

@@ -115,6 +115,42 @@ function formatPrice(value) {
   return number.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
 }
 
+function detectVietnamExchange(exchangeText) {
+  const text = safeText(exchangeText).toUpperCase();
+  if (text.includes("UPCOM")) return "UPCOM";
+  if (text.includes("HNX") || text.includes("HANOI")) return "HNX";
+  return "HOSE";
+}
+
+function priceStep(price) {
+  const value = toNumber(price);
+  if (value === null) return 100;
+  if (value < 10000) return 10;
+  if (value < 50000) return 50;
+  return 100;
+}
+
+function roundToStep(value, step, mode) {
+  if (mode === "ceil") return Math.ceil(value / step) * step;
+  return Math.floor(value / step) * step;
+}
+
+function calculateCeilingFloor(referencePrice, exchangeText) {
+  const reference = toNumber(referencePrice);
+  if (reference === null) return { ceiling: null, floor: null, exchange: detectVietnamExchange(exchangeText) };
+
+  const exchange = detectVietnamExchange(exchangeText);
+  const limit = exchange === "UPCOM" ? 0.15 : exchange === "HNX" ? 0.10 : 0.07;
+  const ceilingRaw = reference * (1 + limit);
+  const floorRaw = reference * (1 - limit);
+
+  return {
+    ceiling: roundToStep(ceilingRaw, priceStep(ceilingRaw), "floor"),
+    floor: roundToStep(floorRaw, priceStep(floorRaw), "ceil"),
+    exchange
+  };
+}
+
 function formatPercent(value) {
   const number = toNumber(value);
   if (number === null) return "-";
@@ -926,6 +962,7 @@ function fillData(symbol, quote, overview, bars) {
   const changePercent = toNumber(change) !== null && toNumber(reference)
     ? (toNumber(change) / toNumber(reference)) * 100
     : null;
+  const priceLimits = calculateCeilingFloor(reference, overview.exchange || quote.exchange);
 
   fields.exchange.textContent = `${symbol} ${overview.exchange || quote.exchange ? "- " + safeText(overview.exchange || quote.exchange) : ""}`;
   fields.companyName.textContent = safeText(overview.name) !== "-" ? overview.name : symbol;
@@ -937,9 +974,9 @@ function fillData(symbol, quote, overview, bars) {
   updatePriceColor(currentPrice, reference, fields.priceChange);
 
   fields.referencePrice.textContent = formatPrice(reference);
-  fields.ceilingPrice.textContent = formatPrice(quote.ceilingPrice);
+  fields.ceilingPrice.textContent = formatPrice(quote.ceilingPrice ?? priceLimits.ceiling);
   fields.ceilingPrice.classList.add("ceiling");
-  fields.floorPrice.textContent = formatPrice(quote.floorPrice);
+  fields.floorPrice.textContent = formatPrice(quote.floorPrice ?? priceLimits.floor);
   fields.floorPrice.classList.add("floor");
   fields.highPrice.textContent = formatPrice(quote.highPrice ?? latestBar.high);
   fields.lowPrice.textContent = formatPrice(quote.lowPrice ?? latestBar.low);
