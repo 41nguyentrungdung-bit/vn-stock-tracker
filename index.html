@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#7f1d1d">
-    <title>Theo doi chung khoan Viet Nam</title>
+    <title>Theo dõi chứng khoán Việt Nam</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="styles.css">
@@ -15,19 +15,19 @@
         <header class="hero">
           <div>
             <span class="eyebrow">HOSE / HNX / UPCOM</span>
-            <h1>Theo doi chung khoan Viet Nam</h1>
-            <p>Nhap ma co phieu Viet Nam de xem gia, san giao dich, khoi luong, bien dong va bieu do lich su.</p>
+            <h1>Theo dõi chứng khoán Việt Nam</h1>
+            <p>Nhập mã cổ phiếu Việt Nam để xem giá, sàn giao dịch, khối lượng, biến động và biểu đồ lịch sử.</p>
           </div>
-          <span id="lastUpdated" class="pill">Chua tai du lieu</span>
+          <span id="lastUpdated" class="pill">Chưa tải dữ liệu</span>
         </header>
 
         <form id="stockForm" class="search-panel">
-          <label for="symbol">Ma chung khoan</label>
+          <label for="symbol">Mã chứng khoán</label>
           <div class="input-row">
-            <input id="symbol" type="text" autocomplete="off" placeholder="Vi du: FPT, VNM, VCB, HPG">
-            <button type="submit">Tai du lieu</button>
+            <input id="symbol" type="text" autocomplete="off" placeholder="Ví dụ: FPT, VNM, VCB, HPG">
+            <button type="submit">Tải dữ liệu</button>
           </div>
-          <div class="quick-symbols" aria-label="Ma pho bien">
+          <div class="quick-symbols" aria-label="Mã phổ biến">
             <button type="button" data-symbol="FPT">FPT</button>
             <button type="button" data-symbol="VNM">VNM</button>
             <button type="button" data-symbol="VCB">VCB</button>
@@ -38,48 +38,48 @@
           <p id="message" class="message" role="status"></p>
         </form>
 
-        <nav class="tabs" aria-label="Chon noi dung">
-          <button id="overviewTab" class="tab active" type="button" data-tab="overview" aria-selected="true">Theo doi</button>
-          <button id="scoreTab" class="tab" type="button" data-tab="score" aria-selected="false">Bang danh gia</button>
+        <nav class="tabs" aria-label="Chọn nội dung">
+          <button id="overviewTab" class="tab active" type="button" data-tab="overview" aria-selected="true">Theo dõi</button>
+          <button id="scoreTab" class="tab" type="button" data-tab="score" aria-selected="false">Bảng đánh giá</button>
         </nav>
 
         <section id="overviewPanel" class="tab-panel active">
         <section class="quote-card">
           <div>
             <span id="exchange" class="eyebrow">-</span>
-            <h2 id="companyName">Nhap ma chung khoan Viet Nam de bat dau</h2>
-            <p id="companyDescription">App chi theo doi cac ma co phieu Viet Nam. Khong can Alpha Vantage API key.</p>
+            <h2 id="companyName">Nhập mã chứng khoán Việt Nam để bắt đầu</h2>
+            <p id="companyDescription">App chỉ theo dõi các mã cổ phiếu Việt Nam. Không cần Alpha Vantage API key.</p>
           </div>
           <div class="price-box">
-            <span>Gia hien tai</span>
+            <span>Giá hiện tại</span>
             <strong id="currentPrice">-</strong>
             <em id="priceChange">-</em>
           </div>
         </section>
 
-        <section class="metrics-grid" aria-label="Chi so giao dich">
-          <article><span>Dong truoc</span><strong id="referencePrice">-</strong></article>
-          <article><span>Tran</span><strong id="ceilingPrice">-</strong></article>
-          <article><span>San</span><strong id="floorPrice">-</strong></article>
-          <article><span>Cao nhat</span><strong id="highPrice">-</strong></article>
-          <article><span>Thap nhat</span><strong id="lowPrice">-</strong></article>
-          <article><span>Khoi luong</span><strong id="volume">-</strong></article>
+        <section class="metrics-grid" aria-label="Chỉ số giao dịch">
+          <article><span>Đóng trước</span><strong id="referencePrice">-</strong></article>
+          <article><span>Trần</span><strong id="ceilingPrice">-</strong></article>
+          <article><span>Sàn</span><strong id="floorPrice">-</strong></article>
+          <article><span>Cao nhất</span><strong id="highPrice">-</strong></article>
+          <article><span>Thấp nhất</span><strong id="lowPrice">-</strong></article>
+          <article><span>Khối lượng</span><strong id="volume">-</strong></article>
         </section>
 
         <section class="chart-section">
           <div class="section-head">
-            <h2>Bieu do gia dong cua</h2>
-            <span id="chartRange">Gia + MA10/50/100/200</span>
+            <h2>Biểu đồ giá đóng cửa</h2>
+            <span id="chartRange">Giá + MA10/50/100/200</span>
           </div>
-          <canvas id="priceChart" width="960" height="340" aria-label="Bieu do gia dong cua"></canvas>
+          <canvas id="priceChart" width="960" height="340" aria-label="Biểu đồ giá đóng cửa"></canvas>
           <div class="chart-legend">
-            <span><i class="legend-price"></i>Gia</span>
+            <span><i class="legend-price"></i>Giá</span>
             <span><i class="legend-ma10"></i>MA10</span>
             <span><i class="legend-ma50"></i>MA50</span>
             <span><i class="legend-ma100"></i>MA100</span>
             <span><i class="legend-ma200"></i>MA200</span>
           </div>
-          <div class="ma-summary" aria-label="Gia tri duong trung binh dong">
+          <div class="ma-summary" aria-label="Giá trị đường trung bình động">
             <article><span>MA 10</span><strong id="ma10">-</strong></article>
             <article><span>MA 50</span><strong id="ma50">-</strong></article>
             <article><span>MA 100</span><strong id="ma100">-</strong></article>
@@ -93,7 +93,7 @@
               <h2>RSI 14</h2>
               <span id="rsiValue">-</span>
             </div>
-            <canvas id="rsiChart" width="460" height="220" aria-label="Bieu do RSI 14"></canvas>
+            <canvas id="rsiChart" width="460" height="220" aria-label="Biểu đồ RSI 14"></canvas>
           </article>
 
           <article class="indicator-card">
@@ -101,61 +101,61 @@
               <h2>MACD 12, 26, 9</h2>
               <span id="macdValue">-</span>
             </div>
-            <canvas id="macdChart" width="460" height="220" aria-label="Bieu do MACD"></canvas>
+            <canvas id="macdChart" width="460" height="220" aria-label="Biểu đồ MACD"></canvas>
           </article>
         </section>
 
         <section class="change-section">
           <div class="section-head">
-            <h2>Bien dong gia</h2>
-            <span>% thay doi theo so phien gan nhat</span>
+            <h2>Biến động giá</h2>
+            <span>% thay đổi theo số phiên gần nhất</span>
           </div>
           <div class="change-grid">
-            <article><span>3 ngay</span><strong id="change3">-</strong></article>
-            <article><span>7 ngay</span><strong id="change7">-</strong></article>
-            <article><span>10 ngay</span><strong id="change10">-</strong></article>
-            <article><span>14 ngay</span><strong id="change14">-</strong></article>
-            <article><span>21 ngay</span><strong id="change21">-</strong></article>
-            <article><span>30 ngay</span><strong id="change30">-</strong></article>
+            <article><span>3 ngày</span><strong id="change3">-</strong></article>
+            <article><span>7 ngày</span><strong id="change7">-</strong></article>
+            <article><span>10 ngày</span><strong id="change10">-</strong></article>
+            <article><span>14 ngày</span><strong id="change14">-</strong></article>
+            <article><span>21 ngày</span><strong id="change21">-</strong></article>
+            <article><span>30 ngày</span><strong id="change30">-</strong></article>
           </div>
         </section>
 
         <section class="flow-section">
           <div class="section-head">
-            <h2>Gia tri mua ban cua nha dau tu</h2>
-            <span id="flowStatus">Chua co nguon du lieu</span>
+            <h2>Giá trị mua bán của nhà đầu tư</h2>
+            <span id="flowStatus">Chưa có nguồn dữ liệu</span>
           </div>
           <div class="metrics-grid flow-grid">
-            <article><span>Nuoc ngoai mua</span><strong id="foreignBuy">-</strong></article>
-            <article><span>Nuoc ngoai ban</span><strong id="foreignSell">-</strong></article>
-            <article><span>Nuoc ngoai rong</span><strong id="foreignNet">-</strong></article>
-            <article><span>Trong nuoc mua</span><strong id="domesticBuy">-</strong></article>
-            <article><span>Trong nuoc ban</span><strong id="domesticSell">-</strong></article>
-            <article><span>Trong nuoc rong</span><strong id="domesticNet">-</strong></article>
+            <article><span>Nước ngoài mua</span><strong id="foreignBuy">-</strong></article>
+            <article><span>Nước ngoài bán</span><strong id="foreignSell">-</strong></article>
+            <article><span>Nước ngoài ròng</span><strong id="foreignNet">-</strong></article>
+            <article><span>Trong nước mua</span><strong id="domesticBuy">-</strong></article>
+            <article><span>Trong nước bán</span><strong id="domesticSell">-</strong></article>
+            <article><span>Trong nước ròng</span><strong id="domesticNet">-</strong></article>
           </div>
-          <p class="note">Yahoo Finance khong cung cap du lieu mua/ban theo nhom nha dau tu. Khu vuc nay da san san de noi API khac khi co nguon du lieu phu hop.</p>
+          <p class="note">Khu vực này hiển thị dữ liệu mua/bán nước ngoài từ Vietcap/VCI khi nguồn trả về; phần trong nước được ước tính từ tổng giá trị giao dịch.</p>
         </section>
 
         <section class="history-section">
           <div class="section-head">
-            <h2>Lich su gia</h2>
+            <h2>Lịch sử giá</h2>
             <span id="historyCount">-</span>
           </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Ngay</th>
-                  <th>Mo cua</th>
+                  <th>Ngày</th>
+                  <th>Mở cửa</th>
                   <th>Cao</th>
-                  <th>Thap</th>
-                  <th>Dong cua</th>
-                  <th>% thay doi</th>
-                  <th>Khoi luong</th>
+                  <th>Thấp</th>
+                  <th>Đóng cửa</th>
+                  <th>% thay đổi</th>
+                  <th>Khối lượng</th>
                 </tr>
               </thead>
               <tbody id="historyBody">
-                <tr><td colspan="7">Chua co du lieu.</td></tr>
+                <tr><td colspan="7">Chưa có dữ liệu.</td></tr>
               </tbody>
             </table>
           </div>
@@ -163,18 +163,18 @@
 
         <section class="details-grid">
           <article class="detail-card">
-            <h2>Thong tin co phieu</h2>
+            <h2>Thông tin cổ phiếu</h2>
             <dl>
-              <div><dt>Ma</dt><dd id="ticker">-</dd></div>
-              <div><dt>San</dt><dd id="listedExchange">-</dd></div>
-              <div><dt>Nganh</dt><dd id="industry">-</dd></div>
-              <div><dt>Nhom nganh</dt><dd id="sector">-</dd></div>
-              <div><dt>Von hoa</dt><dd id="marketCap">-</dd></div>
+              <div><dt>Mã</dt><dd id="ticker">-</dd></div>
+              <div><dt>Sàn</dt><dd id="listedExchange">-</dd></div>
+              <div><dt>Ngành</dt><dd id="industry">-</dd></div>
+              <div><dt>Nhóm ngành</dt><dd id="sector">-</dd></div>
+              <div><dt>Vốn hóa</dt><dd id="marketCap">-</dd></div>
             </dl>
           </article>
 
           <article class="detail-card">
-            <h2>Chi so co ban</h2>
+            <h2>Chỉ số cơ bản</h2>
             <dl>
               <div><dt>P/E</dt><dd id="peRatio">-</dd></div>
               <div><dt>P/B</dt><dd id="pbRatio">-</dd></div>
@@ -187,21 +187,21 @@
 
         <section class="raw-section">
           <div class="section-head">
-            <h2>Du lieu gan day</h2>
+            <h2>Dữ liệu gần đây</h2>
             <button id="copyButton" type="button" class="secondary">Copy JSON</button>
           </div>
-          <pre id="rawData">Chua co du lieu.</pre>
+          <pre id="rawData">Chưa có dữ liệu.</pre>
         </section>
         </section>
 
         <section id="scorePanel" class="tab-panel" hidden>
           <section class="score-section">
             <div class="section-head">
-              <h2>Bang danh gia</h2>
-              <span id="scoreTotalBadge">Chua co du lieu</span>
+              <h2>Bảng đánh giá</h2>
+              <span id="scoreTotalBadge">Chưa có dữ liệu</span>
             </div>
             <div id="scoreAnalysis" class="score-analysis">
-              Hay tra cuu mot ma co phieu truoc, sau do quay lai tab nay de xem phan tich theo thang diem 100.
+              Hãy tra cứu một mã cổ phiếu trước, sau đó quay lại tab này để xem phân tích theo thang điểm 100.
             </div>
           </section>
         </section>

@@ -171,13 +171,13 @@ function formatLargeNumber(value) {
   if (number === null) return "-";
 
   if (Math.abs(number) >= 1_000_000_000_000) {
-    return `${formatNumber(number / 1_000_000_000_000, 2)} nghin ty`;
+    return `${formatNumber(number / 1_000_000_000_000, 2)} nghìn tỷ`;
   }
   if (Math.abs(number) >= 1_000_000_000) {
-    return `${formatNumber(number / 1_000_000_000, 2)} ty`;
+    return `${formatNumber(number / 1_000_000_000, 2)} tỷ`;
   }
   if (Math.abs(number) >= 1_000_000) {
-    return `${formatNumber(number / 1_000_000, 2)} trieu`;
+    return `${formatNumber(number / 1_000_000, 2)} triệu`;
   }
   return formatInteger(number);
 }
@@ -188,7 +188,7 @@ function formatOptional(value, digits = 2) {
 
 async function requestJson(path) {
   if (location.protocol === "file:") {
-    throw new Error("Dang mo bang file:// nen khong co proxy du lieu. Hay chay local-server.js roi mo http://localhost:8787.");
+    throw new Error("Đang mở bằng file:// nên không có proxy dữ liệu. Hãy chạy local-server.js rồi mở http://localhost:8787.");
   }
 
   const url = `${PROXY_BASE}?path=${encodeURIComponent(path)}`;
@@ -197,11 +197,11 @@ async function requestJson(path) {
   try {
     response = await fetch(url, { headers: { accept: "application/json" } });
   } catch (error) {
-    throw new Error("Khong ket noi duoc den proxy du lieu. Hay kiem tra website da deploy kem Netlify Function chua.");
+    throw new Error("Không kết nối được đến proxy dữ liệu. Hãy kiểm tra website đã deploy kèm Netlify Function chưa.");
   }
 
   if (!response.ok) {
-    throw new Error(`Khong tai duoc du lieu. HTTP ${response.status}`);
+    throw new Error(`Không tải được dữ liệu. HTTP ${response.status}`);
   }
 
   return response.json();
@@ -209,14 +209,14 @@ async function requestJson(path) {
 
 async function requestVciData(symbol) {
   if (location.protocol === "file:") {
-    throw new Error("Dang mo bang file:// nen khong co proxy du lieu. Hay chay local-server.js roi mo http://localhost:8787.");
+    throw new Error("Đang mở bằng file:// nên không có proxy dữ liệu. Hãy chạy local-server.js rồi mở http://localhost:8787.");
   }
 
   const response = await fetch(`${PROXY_BASE}?source=vci&symbol=${encodeURIComponent(symbol)}`, {
     headers: { accept: "application/json" }
   });
   if (!response.ok) {
-    throw new Error(`VCI khong tai duoc du lieu. HTTP ${response.status}`);
+    throw new Error(`VCI không tải được dữ liệu. HTTP ${response.status}`);
   }
   return response.json();
 }
@@ -281,7 +281,7 @@ function parseYahooChart(rawData) {
       exchange: meta.fullExchangeName || meta.exchangeName,
       industry: "-",
       sector: "-",
-      description: `Du lieu gia lay tu Yahoo Finance cho ma ${meta.symbol}. Tien te: ${meta.currency || "VND"}.`,
+      description: `Dữ liệu giá lấy từ Yahoo Finance cho mã ${meta.symbol}. Tiền tệ: ${meta.currency || "VND"}.`,
       marketCap: null,
       pe: null,
       pb: null,
@@ -358,7 +358,7 @@ function parseVciData(rawData) {
       exchange,
       industry: "-",
       sector: "-",
-      description: `Du lieu gia lay tu Vietcap/VCI cho ma ${rawData.symbol || chart.symbol}. San: ${exchange || "-"}.`,
+      description: `Dữ liệu giá lấy từ Vietcap/VCI cho mã ${rawData.symbol || chart.symbol}. Sàn: ${exchange || "-"}.`,
       marketCap: null,
       pe: null,
       pb: null,
@@ -381,7 +381,7 @@ function drawChart(points) {
   if (!points.length) {
     context.fillStyle = "#78716c";
     context.font = "18px Arial";
-    context.fillText("Chua co du lieu bieu do.", 24, 48);
+    context.fillText("Chưa có dữ liệu biểu đồ.", 24, 48);
     return;
   }
 
@@ -556,7 +556,7 @@ function drawLineCanvas(canvas, values, options = {}) {
   if (!numericValues.length) {
     context.fillStyle = "#78716c";
     context.font = "16px Arial";
-    context.fillText("Chua du du lieu.", 18, 38);
+    context.fillText("Chưa đủ dữ liệu.", 18, 38);
     return;
   }
 
@@ -612,7 +612,7 @@ function drawMacdCanvas(canvas, macdData) {
   if (!allValues.length) {
     context.fillStyle = "#78716c";
     context.font = "16px Arial";
-    context.fillText("Chua du du lieu.", 18, 38);
+    context.fillText("Chưa đủ dữ liệu.", 18, 38);
     return;
   }
 
@@ -718,7 +718,7 @@ function renderInvestorFlow(quote) {
   const domesticClass = valueClass(domesticNet);
   if (foreignClass) fields.foreignNet.classList.add(foreignClass);
   if (domesticClass) fields.domesticNet.classList.add(domesticClass);
-  fields.flowStatus.textContent = foreignBuy !== null ? "Du lieu tu Vietcap/VCI" : "Chua co du lieu";
+  fields.flowStatus.textContent = foreignBuy !== null ? "Dữ liệu từ Vietcap/VCI" : "Chưa có dữ liệu";
 }
 
 function renderHistory(bars) {
@@ -731,7 +731,7 @@ function renderHistory(bars) {
     .slice(-60)
     .reverse();
 
-  fields.historyCount.textContent = `${rows.length} phien gan nhat`;
+  fields.historyCount.textContent = `${rows.length} phiên gần nhất`;
   fields.historyBody.innerHTML = rows.map((row) => `
     <tr>
       <td>${safeText(row.time)}</td>
@@ -926,57 +926,57 @@ function scoreStock(symbol, quote, overview, bars, movingAverages, indicators) {
 }
 
 function conclusionForScore(total) {
-  if (total >= 85) return "Mua rat manh theo he thong";
-  if (total >= 75) return "Mua manh theo he thong";
-  if (total >= 65) return "Theo doi mua / mua tung phan";
-  if (total >= 50) return "Trung tinh, can them tin hieu xac nhan";
-  return "Yeu, chua nen uu tien";
+  if (total >= 85) return "Mua rất mạnh theo hệ thống";
+  if (total >= 75) return "Mua mạnh theo hệ thống";
+  if (total >= 65) return "Theo dõi mua / mua từng phần";
+  if (total >= 50) return "Trung tính, cần thêm tín hiệu xác nhận";
+  return "Yếu, chưa nên ưu tiên";
 }
 
 function renderScoreAnalysis(symbol, quote, overview, bars, movingAverages, indicators) {
   const score = scoreStock(symbol, quote, overview, bars, movingAverages, indicators);
   const name = safeText(overview.name) !== "-" ? overview.name : symbol;
-  const macdState = score.latestMacd > score.latestSignal ? "MACD dang nam tren Signal" : "MACD dang nam duoi Signal";
+  const macdState = score.latestMacd > score.latestSignal ? "MACD đang nằm trên Signal" : "MACD đang nằm dưới Signal";
   const trendState = score.currentPrice > score.ma50 && score.ma50 > score.ma100 && score.ma100 > score.ma200
-    ? "Xu huong gia dang rat tich cuc: gia tren MA50 va MA50 > MA100 > MA200."
-    : "Xu huong chua dong thuan hoan toan giua gia va cac duong MA lon.";
+    ? "Xu hướng giá đang rất tích cực: giá trên MA50 và MA50 > MA100 > MA200."
+    : "Xu hướng chưa đồng thuận hoàn toàn giữa giá và các đường MA lớn.";
   const rsiState = score.latestRsi >= 50 && score.latestRsi <= 65
-    ? "RSI nam trong vung khoe, chua qua nong."
+    ? "RSI nằm trong vùng khỏe, chưa quá nóng."
     : score.latestRsi > 70
-      ? "RSI dang cao, can de y rui ro rung lac ngan han."
-      : "RSI chua cho tin hieu suc manh ro rang.";
+      ? "RSI đang cao, cần để ý rủi ro rung lắc ngắn hạn."
+      : "RSI chưa cho tín hiệu sức mạnh rõ ràng.";
   const rrText = score.riskReward === null ? "-" : `${formatNumber(score.riskReward, 2)} : 1`;
   const upgradeText = [
-    score.latestMacd <= score.latestSignal ? "MACD cat len Signal" : null,
-    score.latestRsi < 55 ? "RSI vuot lai tren 55" : null,
-    score.levels.resistance1 ? `Gia vuot ${formatPrice(score.levels.resistance1)} voi volume tot` : "Gia vuot khang cu gan",
-    score.latestVolume < score.avgVolume20 ? "Volume vuot trung binh 20 phien" : null
+    score.latestMacd <= score.latestSignal ? "MACD cắt lên Signal" : null,
+    score.latestRsi < 55 ? "RSI vượt lại trên 55" : null,
+    score.levels.resistance1 ? `Giá vượt ${formatPrice(score.levels.resistance1)} với volume tốt` : "Giá vượt kháng cự gần",
+    score.latestVolume < score.avgVolume20 ? "Volume vượt trung bình 20 phiên" : null
   ].filter(Boolean);
 
-  fields.scoreTotalBadge.textContent = `${score.total}/100 diem`;
+  fields.scoreTotalBadge.textContent = `${score.total}/100 điểm`;
   fields.scoreAnalysis.innerHTML = `
     <div class="score-hero">
       <h3>${escapeHtml(symbol)} - ${escapeHtml(name)}</h3>
-      <p><strong>Gia hien tai:</strong> ${formatPrice(score.currentPrice)}</p>
-      <p><strong>Ket luan:</strong> ${conclusionForScore(score.total)}.</p>
+      <p><strong>Giá hiện tại:</strong> ${formatPrice(score.currentPrice)}</p>
+      <p><strong>Kết luận:</strong> ${conclusionForScore(score.total)}.</p>
       <span class="score-tag">${score.total}/100</span>
     </div>
 
     <div class="score-block">
-      <h3>1. Xu huong (${score.trendScore}/25)</h3>
+      <h3>1. Xu hướng (${score.trendScore}/25)</h3>
       <p>${trendState}</p>
       <ul class="score-points">
-        <li>Gia hien tai: ${formatPrice(score.currentPrice)}</li>
+        <li>Giá hiện tại: ${formatPrice(score.currentPrice)}</li>
         <li>MA50: ${formatOptional(score.ma50, 2)}, MA100: ${formatOptional(score.ma100, 2)}, MA200: ${formatOptional(score.ma200, 2)}</li>
-        <li>Bien dong 30 phien: ${formatPercent(score.change30)}</li>
+        <li>Biến động 30 phiên: ${formatPercent(score.change30)}</li>
       </ul>
     </div>
 
     <div class="score-block">
-      <h3>2. Volume - Dong tien (${score.volumeScore}/20)</h3>
-      <p>Thanh khoan phien gan nhat duoc so sanh voi trung binh 20 va 60 phien.</p>
+      <h3>2. Volume - Dòng tiền (${score.volumeScore}/20)</h3>
+      <p>Thanh khoản phiên gần nhất được so sánh với trung bình 20 và 60 phiên.</p>
       <ul class="score-points">
-        <li>Volume gan nhat: ${formatInteger(score.latestVolume)}</li>
+        <li>Volume gần nhất: ${formatInteger(score.latestVolume)}</li>
         <li>Volume TB20: ${formatInteger(score.avgVolume20)}</li>
         <li>Volume TB60: ${formatInteger(score.avgVolume60)}</li>
       </ul>
@@ -985,70 +985,70 @@ function renderScoreAnalysis(symbol, quote, overview, bars, movingAverages, indi
     <div class="score-block">
       <h3>3. RSI (${score.rsiScore}/10)</h3>
       <p>${rsiState}</p>
-      <p>RSI 14 hien tai: <strong>${formatOptional(score.latestRsi, 2)}</strong>.</p>
+      <p>RSI 14 hiện tại: <strong>${formatOptional(score.latestRsi, 2)}</strong>.</p>
     </div>
 
     <div class="score-block">
       <h3>4. MACD (${score.macdScore}/10)</h3>
-      <p>${macdState}. Histogram hien tai: ${formatOptional(score.latestHistogram, 2)}.</p>
+      <p>${macdState}. Histogram hiện tại: ${formatOptional(score.latestHistogram, 2)}.</p>
       <p>MACD: ${formatOptional(score.latestMacd, 2)} / Signal: ${formatOptional(score.latestSignal, 2)}.</p>
     </div>
 
     <div class="score-block">
-      <h3>5. Ho tro - Khang cu (${score.srScore}/10)</h3>
+      <h3>5. Hỗ trợ - Kháng cự (${score.srScore}/10)</h3>
       <ul class="score-points">
-        <li>Ho tro gan: ${formatPrice(score.levels.support1)}</li>
-        <li>Ho tro sau: ${formatPrice(score.levels.support2)}</li>
-        <li>Khang cu gan: ${formatPrice(score.levels.resistance1)}</li>
-        <li>Khang cu sau: ${formatPrice(score.levels.resistance2)}</li>
+        <li>Hỗ trợ gần: ${formatPrice(score.levels.support1)}</li>
+        <li>Hỗ trợ sâu: ${formatPrice(score.levels.support2)}</li>
+        <li>Kháng cự gần: ${formatPrice(score.levels.resistance1)}</li>
+        <li>Kháng cự sau: ${formatPrice(score.levels.resistance2)}</li>
       </ul>
     </div>
 
     <div class="score-block">
-      <h3>6. Co ban - Tin tuc (${score.fundamentalScore}/10)</h3>
-      <p>Nguon du lieu hien tai chua co tin tuc va bao cao co ban chi tiet, nen diem nay duoc cham o muc trung tinh. Nen bo sung du lieu tin tuc/API co ban neu muon cham sau hon.</p>
+      <h3>6. Cơ bản - Tin tức (${score.fundamentalScore}/10)</h3>
+      <p>Nguồn dữ liệu hiện tại chưa có tin tức và báo cáo cơ bản chi tiết, nên điểm này được chấm ở mức trung tính. Nên bổ sung dữ liệu tin tức/API cơ bản nếu muốn chấm sâu hơn.</p>
     </div>
 
     <div class="score-block">
-      <h3>7. Suc manh nganh (${score.industryScore}/10)</h3>
-      <p>Yahoo Finance khong cung cap day du suc manh nganh theo thi truong Viet Nam trong app hien tai, nen diem nay la diem trung tinh co dieu kien.</p>
+      <h3>7. Sức mạnh ngành (${score.industryScore}/10)</h3>
+      <p>Nguồn dữ liệu hiện tại chưa cung cấp đầy đủ sức mạnh ngành theo thị trường Việt Nam, nên điểm này là điểm trung tính có điều kiện.</p>
     </div>
 
     <div class="score-block">
       <h3>8. Risk / Reward (${score.rrScore}/5)</h3>
       <ul class="score-points">
-        <li>Gia mua tham chieu: ${formatPrice(score.currentPrice)}</li>
-        <li>Cat lo goi y: ${formatPrice(score.stopPrice)} (${formatPercent(-score.riskPercent)})</li>
-        <li>Muc tieu gan: ${formatPrice(score.targetPrice)} (${formatPercent(score.rewardPercent)})</li>
-        <li>Ty le Reward/Risk: ${rrText}</li>
+        <li>Giá mua tham chiếu: ${formatPrice(score.currentPrice)}</li>
+        <li>Cắt lỗ gợi ý: ${formatPrice(score.stopPrice)} (${formatPercent(-score.riskPercent)})</li>
+        <li>Mục tiêu gần: ${formatPrice(score.targetPrice)} (${formatPercent(score.rewardPercent)})</li>
+        <li>Tỷ lệ Reward/Risk: ${rrText}</li>
       </ul>
     </div>
 
     <div class="score-block">
-      <h3>Tong diem</h3>
+      <h3>Tổng điểm</h3>
       <div class="table-wrap score-table-wrap">
         <table class="score-table">
-          <thead><tr><th>Tieu chi</th><th>Diem</th></tr></thead>
+          <thead><tr><th>Tiêu chí</th><th>Điểm</th></tr></thead>
           <tbody>
-            <tr><td>Xu huong</td><td>${score.trendScore}/25</td></tr>
-            <tr><td>Volume - Dong tien</td><td>${score.volumeScore}/20</td></tr>
+            <tr><td>Xu hướng</td><td>${score.trendScore}/25</td></tr>
+            <tr><td>Volume - Dòng tiền</td><td>${score.volumeScore}/20</td></tr>
             <tr><td>RSI</td><td>${score.rsiScore}/10</td></tr>
             <tr><td>MACD</td><td>${score.macdScore}/10</td></tr>
-            <tr><td>Ho tro / Khang cu</td><td>${score.srScore}/10</td></tr>
-            <tr><td>Co ban - Tin tuc</td><td>${score.fundamentalScore}/10</td></tr>
-            <tr><td>Suc manh nganh</td><td>${score.industryScore}/10</td></tr>
+            <tr><td>Hỗ trợ / Kháng cự</td><td>${score.srScore}/10</td></tr>
+            <tr><td>Cơ bản - Tin tức</td><td>${score.fundamentalScore}/10</td></tr>
+            <tr><td>Sức mạnh ngành</td><td>${score.industryScore}/10</td></tr>
             <tr><td>Risk / Reward</td><td>${score.rrScore}/5</td></tr>
-            <tr class="total-row"><td>Tong</td><td>${score.total}/100</td></tr>
+            <tr class="total-row"><td>Tổng</td><td>${score.total}/100</td></tr>
           </tbody>
         </table>
       </div>
     </div>
 
     <div class="score-block">
-      <h3>Ket luan va ke hoach</h3>
+      <h3>Kết luận và kế hoạch</h3>
       <p><strong>${escapeHtml(symbol)} = ${score.total}/100.</strong> ${conclusionForScore(score.total)}.</p>
-      <p>Neu tham gia, co the chia vi the theo tung phan thay vi mua mot lan: mot phan o vung hien tai, mot phan khi MACD xac nhan, va mot phan khi gia vuot khang cu voi volume tot.</p>
-      <p>Dieu kien de nang diem: ${upgradeText.length ? upgradeText.join("; ") : "cac tin hieu ky thuat chinh hien da kha tich cuc, can duy tri thanh khoan va xu huong."}</p>
+      <p>Nếu tham gia, có thể chia vị thế theo từng phần thay vì mua một lần: một phần ở vùng hiện tại, một phần khi MACD xác nhận, và một phần khi giá vượt kháng cự với volume tốt.</p>
+      <p>Điều kiện để nâng điểm: ${upgradeText.length ? upgradeText.join("; ") : "các tín hiệu kỹ thuật chính hiện đã khá tích cực, cần duy trì thanh khoản và xu hướng."}</p>
     </div>
   `;
 
