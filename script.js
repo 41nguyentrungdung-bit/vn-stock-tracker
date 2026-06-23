@@ -23,6 +23,10 @@ const fields = {
   highPrice: document.getElementById("highPrice"),
   lowPrice: document.getElementById("lowPrice"),
   volume: document.getElementById("volume"),
+  ma10: document.getElementById("ma10"),
+  ma50: document.getElementById("ma50"),
+  ma100: document.getElementById("ma100"),
+  ma200: document.getElementById("ma200"),
   chartRange: document.getElementById("chartRange"),
   ticker: document.getElementById("ticker"),
   listedExchange: document.getElementById("listedExchange"),
@@ -250,6 +254,31 @@ function drawChart(points) {
   context.lineWidth = 3;
   context.stroke();
 
+  const movingAverages = calculateMovingAverages(points);
+  [
+    { values: movingAverages.ma10, color: "#2563eb" },
+    { values: movingAverages.ma50, color: "#047857" },
+    { values: movingAverages.ma100, color: "#7c3aed" },
+    { values: movingAverages.ma200, color: "#f59e0b" }
+  ].forEach((series) => {
+    context.beginPath();
+    let started = false;
+    series.values.forEach((value, index) => {
+      if (value === null) return;
+      const x = padding + ((width - padding * 2) / Math.max(points.length - 1, 1)) * index;
+      const y = height - padding - ((value - min) / span) * (height - padding * 2);
+      if (!started) {
+        context.moveTo(x, y);
+        started = true;
+      } else {
+        context.lineTo(x, y);
+      }
+    });
+    context.strokeStyle = series.color;
+    context.lineWidth = 2;
+    context.stroke();
+  });
+
   context.fillStyle = "#78716c";
   context.font = "13px Arial";
   context.fillText(formatPrice(max), 8, padding + 4);
@@ -285,6 +314,33 @@ function calculateRsi(points, period = 14) {
   }
 
   return rsi;
+}
+
+function calculateSma(points, period) {
+  const values = points.map((point) => point.close);
+  const sma = Array(values.length).fill(null);
+  let sum = 0;
+
+  values.forEach((value, index) => {
+    sum += value;
+    if (index >= period) {
+      sum -= values[index - period];
+    }
+    if (index >= period - 1) {
+      sma[index] = sum / period;
+    }
+  });
+
+  return sma;
+}
+
+function calculateMovingAverages(points) {
+  return {
+    ma10: calculateSma(points, 10),
+    ma50: calculateSma(points, 50),
+    ma100: calculateSma(points, 100),
+    ma200: calculateSma(points, 200)
+  };
 }
 
 function calculateEma(values, period) {
@@ -493,10 +549,14 @@ function renderInvestorFlow() {
   fields.flowStatus.textContent = "Yahoo Finance khong co du lieu nay";
 }
 
-function renderHistory(bars, indicators) {
+function renderHistory(bars, indicators, movingAverages) {
   const rows = bars
     .map((bar, index) => ({
       ...bar,
+      ma10: movingAverages.ma10[index],
+      ma50: movingAverages.ma50[index],
+      ma100: movingAverages.ma100[index],
+      ma200: movingAverages.ma200[index],
       rsi: indicators.rsi[index],
       macd: indicators.macd.macd[index]
     }))
@@ -512,6 +572,10 @@ function renderHistory(bars, indicators) {
       <td>${formatPrice(row.low)}</td>
       <td>${formatPrice(row.close)}</td>
       <td>${formatInteger(row.volume)}</td>
+      <td>${formatOptional(row.ma10, 2)}</td>
+      <td>${formatOptional(row.ma50, 2)}</td>
+      <td>${formatOptional(row.ma100, 2)}</td>
+      <td>${formatOptional(row.ma200, 2)}</td>
       <td>${formatOptional(row.rsi, 2)}</td>
       <td>${formatOptional(row.macd, 2)}</td>
     </tr>
@@ -525,6 +589,18 @@ function updatePriceColor(price, reference, target) {
   if (current === null || ref === null) return;
   if (current > ref) target.classList.add("positive");
   if (current < ref) target.classList.add("negative");
+}
+
+function renderMovingAverages(bars) {
+  const movingAverages = calculateMovingAverages(bars);
+  const latestValue = (series) => [...series].reverse().find((value) => value !== null);
+
+  fields.ma10.textContent = formatOptional(latestValue(movingAverages.ma10), 2);
+  fields.ma50.textContent = formatOptional(latestValue(movingAverages.ma50), 2);
+  fields.ma100.textContent = formatOptional(latestValue(movingAverages.ma100), 2);
+  fields.ma200.textContent = formatOptional(latestValue(movingAverages.ma200), 2);
+
+  return movingAverages;
 }
 
 function fillData(symbol, quote, overview, bars) {
@@ -568,9 +644,10 @@ function fillData(symbol, quote, overview, bars) {
   fields.beta.textContent = safeText(overview.beta);
 
   drawChart(bars);
+  const movingAverages = renderMovingAverages(bars);
   const indicators = renderIndicators(bars);
   renderInvestorFlow();
-  renderHistory(bars, indicators);
+  renderHistory(bars, indicators, movingAverages);
   fields.chartRange.textContent = `${bars.length} phien gan nhat`;
 }
 
@@ -583,7 +660,7 @@ async function loadVietnamStock(symbol) {
 
   for (const candidate of candidates) {
     try {
-      const raw = await requestJson(`/v8/finance/chart/${encodeURIComponent(candidate)}?range=1y&interval=1d`);
+      const raw = await requestJson(`/v8/finance/chart/${encodeURIComponent(candidate)}?range=2y&interval=1d`);
       parsed = parseYahooChart(raw);
       if (parsed && parsed.bars.length) break;
     } catch (error) {
@@ -597,7 +674,7 @@ async function loadVietnamStock(symbol) {
 
   const quote = parsed.quote;
   const overview = parsed.overview;
-  const bars = parsed.bars.slice(-120);
+  const bars = parsed.bars.slice(-260);
 
   fillData(symbol, quote, overview, bars);
   latestPayload = {
@@ -609,7 +686,13 @@ async function loadVietnamStock(symbol) {
     recentBars: bars.slice(-30),
     indicators: {
       rsi14: fields.rsiValue.textContent,
-      macd: fields.macdValue.textContent
+      macd: fields.macdValue.textContent,
+      movingAverages: {
+        ma10: fields.ma10.textContent,
+        ma50: fields.ma50.textContent,
+        ma100: fields.ma100.textContent,
+        ma200: fields.ma200.textContent
+      }
     },
     investorFlow: {
       status: "Yahoo Finance khong cung cap du lieu mua/ban theo nhom nha dau tu"

@@ -60,12 +60,26 @@
           <article><span>Khoi luong</span><strong id="volume">-</strong></article>
         </section>
 
+        <section class="metrics-grid ma-grid" aria-label="Duong trung binh dong">
+          <article><span>MA 10</span><strong id="ma10">-</strong></article>
+          <article><span>MA 50</span><strong id="ma50">-</strong></article>
+          <article><span>MA 100</span><strong id="ma100">-</strong></article>
+          <article><span>MA 200</span><strong id="ma200">-</strong></article>
+        </section>
+
         <section class="chart-section">
           <div class="section-head">
             <h2>Bieu do gia dong cua</h2>
-            <span id="chartRange">Gan 120 phien</span>
+            <span id="chartRange">Gia + MA10/50/100/200</span>
           </div>
           <canvas id="priceChart" width="960" height="340" aria-label="Bieu do gia dong cua"></canvas>
+          <div class="chart-legend">
+            <span><i class="legend-price"></i>Gia</span>
+            <span><i class="legend-ma10"></i>MA10</span>
+            <span><i class="legend-ma50"></i>MA50</span>
+            <span><i class="legend-ma100"></i>MA100</span>
+            <span><i class="legend-ma200"></i>MA200</span>
+          </div>
         </section>
 
         <section class="indicator-grid">
@@ -117,12 +131,16 @@
                   <th>Thap</th>
                   <th>Dong cua</th>
                   <th>Khoi luong</th>
+                  <th>MA10</th>
+                  <th>MA50</th>
+                  <th>MA100</th>
+                  <th>MA200</th>
                   <th>RSI</th>
                   <th>MACD</th>
                 </tr>
               </thead>
               <tbody id="historyBody">
-                <tr><td colspan="8">Chua co du lieu.</td></tr>
+                <tr><td colspan="12">Chua co du lieu.</td></tr>
               </tbody>
             </table>
           </div>

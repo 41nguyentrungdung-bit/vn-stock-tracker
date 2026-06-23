@@ -317,6 +317,52 @@ canvas {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.ma-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-legend i {
+  width: 22px;
+  height: 3px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.legend-price {
+  background: #dc2626;
+}
+
+.legend-ma10 {
+  background: #2563eb;
+}
+
+.legend-ma50 {
+  background: #047857;
+}
+
+.legend-ma100 {
+  background: #7c3aed;
+}
+
+.legend-ma200 {
+  background: #f59e0b;
+}
+
 .note {
   margin: 12px 0 0;
   color: var(--muted);
@@ -332,7 +378,7 @@ canvas {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 820px;
+  min-width: 1120px;
   background: #ffffff;
 }
 
@@ -428,6 +474,10 @@ pre {
   .flow-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .ma-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 520px) {
@@ -453,6 +503,10 @@ pre {
   }
 
   .flow-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ma-grid {
     grid-template-columns: 1fr;
   }
 
