@@ -6,6 +6,8 @@ const symbolInput = document.getElementById("symbol");
 const message = document.getElementById("message");
 const copyButton = document.getElementById("copyButton");
 const chartCanvas = document.getElementById("priceChart");
+const rsiCanvas = document.getElementById("rsiChart");
+const macdCanvas = document.getElementById("macdChart");
 const quickSymbols = document.querySelector(".quick-symbols");
 
 const fields = {
@@ -32,6 +34,17 @@ const fields = {
   roe: document.getElementById("roe"),
   eps: document.getElementById("eps"),
   beta: document.getElementById("beta"),
+  rsiValue: document.getElementById("rsiValue"),
+  macdValue: document.getElementById("macdValue"),
+  foreignBuy: document.getElementById("foreignBuy"),
+  foreignSell: document.getElementById("foreignSell"),
+  foreignNet: document.getElementById("foreignNet"),
+  domesticBuy: document.getElementById("domesticBuy"),
+  domesticSell: document.getElementById("domesticSell"),
+  domesticNet: document.getElementById("domesticNet"),
+  flowStatus: document.getElementById("flowStatus"),
+  historyCount: document.getElementById("historyCount"),
+  historyBody: document.getElementById("historyBody"),
   rawData: document.getElementById("rawData")
 };
 
@@ -95,6 +108,10 @@ function formatLargeNumber(value) {
     return `${formatNumber(number / 1_000_000, 2)} trieu`;
   }
   return formatInteger(number);
+}
+
+function formatOptional(value, digits = 2) {
+  return toNumber(value) === null ? "-" : formatNumber(value, digits);
 }
 
 async function requestJson(path) {
@@ -241,6 +258,266 @@ function drawChart(points) {
   context.fillText(safeText(points[points.length - 1].time), width - padding - 90, height - 12);
 }
 
+function calculateRsi(points, period = 14) {
+  const values = points.map((point) => point.close);
+  const rsi = Array(values.length).fill(null);
+  if (values.length <= period) return rsi;
+
+  let gains = 0;
+  let losses = 0;
+  for (let index = 1; index <= period; index += 1) {
+    const change = values[index] - values[index - 1];
+    if (change >= 0) gains += change;
+    else losses += Math.abs(change);
+  }
+
+  let averageGain = gains / period;
+  let averageLoss = losses / period;
+  rsi[period] = averageLoss === 0 ? 100 : 100 - 100 / (1 + averageGain / averageLoss);
+
+  for (let index = period + 1; index < values.length; index += 1) {
+    const change = values[index] - values[index - 1];
+    const gain = change > 0 ? change : 0;
+    const loss = change < 0 ? Math.abs(change) : 0;
+    averageGain = (averageGain * (period - 1) + gain) / period;
+    averageLoss = (averageLoss * (period - 1) + loss) / period;
+    rsi[index] = averageLoss === 0 ? 100 : 100 - 100 / (1 + averageGain / averageLoss);
+  }
+
+  return rsi;
+}
+
+function calculateEma(values, period) {
+  const ema = Array(values.length).fill(null);
+  if (values.length < period) return ema;
+
+  const multiplier = 2 / (period + 1);
+  let sum = 0;
+  for (let index = 0; index < period; index += 1) {
+    sum += values[index];
+  }
+  ema[period - 1] = sum / period;
+
+  for (let index = period; index < values.length; index += 1) {
+    ema[index] = (values[index] - ema[index - 1]) * multiplier + ema[index - 1];
+  }
+
+  return ema;
+}
+
+function calculateMacd(points) {
+  const closes = points.map((point) => point.close);
+  const ema12 = calculateEma(closes, 12);
+  const ema26 = calculateEma(closes, 26);
+  const macd = closes.map((_, index) => {
+    if (ema12[index] === null || ema26[index] === null) return null;
+    return ema12[index] - ema26[index];
+  });
+
+  const signal = Array(macd.length).fill(null);
+  const validMacd = macd.filter((value) => value !== null);
+  const signalValues = calculateEma(validMacd, 9);
+  let validIndex = 0;
+  macd.forEach((value, index) => {
+    if (value === null) return;
+    signal[index] = signalValues[validIndex];
+    validIndex += 1;
+  });
+
+  const histogram = macd.map((value, index) => {
+    if (value === null || signal[index] === null) return null;
+    return value - signal[index];
+  });
+
+  return { macd, signal, histogram };
+}
+
+function drawLineCanvas(canvas, values, options = {}) {
+  const context = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  context.clearRect(0, 0, width, height);
+
+  const numericValues = values.filter((value) => value !== null);
+  if (!numericValues.length) {
+    context.fillStyle = "#78716c";
+    context.font = "16px Arial";
+    context.fillText("Chua du du lieu.", 18, 38);
+    return;
+  }
+
+  const padding = 34;
+  const min = options.min ?? Math.min(...numericValues);
+  const max = options.max ?? Math.max(...numericValues);
+  const span = max - min || 1;
+
+  context.strokeStyle = "#eadbd0";
+  context.lineWidth = 1;
+  for (let index = 0; index < 4; index += 1) {
+    const y = padding + ((height - padding * 2) / 3) * index;
+    context.beginPath();
+    context.moveTo(padding, y);
+    context.lineTo(width - padding, y);
+    context.stroke();
+  }
+
+  (options.guides || []).forEach((guide) => {
+    const y = height - padding - ((guide.value - min) / span) * (height - padding * 2);
+    context.strokeStyle = guide.color;
+    context.setLineDash([6, 5]);
+    context.beginPath();
+    context.moveTo(padding, y);
+    context.lineTo(width - padding, y);
+    context.stroke();
+    context.setLineDash([]);
+    context.fillStyle = guide.color;
+    context.font = "12px Arial";
+    context.fillText(guide.label, width - padding - 28, y - 4);
+  });
+
+  context.beginPath();
+  values.forEach((value, index) => {
+    if (value === null) return;
+    const x = padding + ((width - padding * 2) / Math.max(values.length - 1, 1)) * index;
+    const y = height - padding - ((value - min) / span) * (height - padding * 2);
+    if (index === values.findIndex((item) => item !== null)) context.moveTo(x, y);
+    else context.lineTo(x, y);
+  });
+  context.strokeStyle = options.color || "#dc2626";
+  context.lineWidth = 2.5;
+  context.stroke();
+}
+
+function drawMacdCanvas(canvas, macdData) {
+  const context = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  context.clearRect(0, 0, width, height);
+
+  const allValues = [...macdData.macd, ...macdData.signal, ...macdData.histogram].filter((value) => value !== null);
+  if (!allValues.length) {
+    context.fillStyle = "#78716c";
+    context.font = "16px Arial";
+    context.fillText("Chua du du lieu.", 18, 38);
+    return;
+  }
+
+  const padding = 34;
+  const maxAbs = Math.max(...allValues.map((value) => Math.abs(value))) || 1;
+  const min = -maxAbs;
+  const max = maxAbs;
+  const span = max - min;
+
+  const yFor = (value) => height - padding - ((value - min) / span) * (height - padding * 2);
+  const xFor = (index) => padding + ((width - padding * 2) / Math.max(macdData.macd.length - 1, 1)) * index;
+
+  context.strokeStyle = "#eadbd0";
+  context.lineWidth = 1;
+  [min, 0, max].forEach((value) => {
+    const y = yFor(value);
+    context.beginPath();
+    context.moveTo(padding, y);
+    context.lineTo(width - padding, y);
+    context.stroke();
+  });
+
+  macdData.histogram.forEach((value, index) => {
+    if (value === null) return;
+    const x = xFor(index);
+    const zeroY = yFor(0);
+    const y = yFor(value);
+    context.strokeStyle = value >= 0 ? "#047857" : "#b91c1c";
+    context.lineWidth = 4;
+    context.beginPath();
+    context.moveTo(x, zeroY);
+    context.lineTo(x, y);
+    context.stroke();
+  });
+
+  [
+    { values: macdData.macd, color: "#dc2626" },
+    { values: macdData.signal, color: "#2563eb" }
+  ].forEach((line) => {
+    context.beginPath();
+    let started = false;
+    line.values.forEach((value, index) => {
+      if (value === null) return;
+      const x = xFor(index);
+      const y = yFor(value);
+      if (!started) {
+        context.moveTo(x, y);
+        started = true;
+      } else {
+        context.lineTo(x, y);
+      }
+    });
+    context.strokeStyle = line.color;
+    context.lineWidth = 2;
+    context.stroke();
+  });
+}
+
+function renderIndicators(bars) {
+  const rsi = calculateRsi(bars);
+  const macd = calculateMacd(bars);
+  const latestRsi = [...rsi].reverse().find((value) => value !== null);
+  const latestMacd = [...macd.macd].reverse().find((value) => value !== null);
+  const latestSignal = [...macd.signal].reverse().find((value) => value !== null);
+
+  fields.rsiValue.textContent = latestRsi === undefined ? "-" : formatNumber(latestRsi, 2);
+  fields.macdValue.textContent = latestMacd === undefined
+    ? "-"
+    : `${formatNumber(latestMacd, 2)} / Signal ${formatOptional(latestSignal, 2)}`;
+
+  drawLineCanvas(rsiCanvas, rsi, {
+    min: 0,
+    max: 100,
+    color: "#dc2626",
+    guides: [
+      { value: 70, color: "#b91c1c", label: "70" },
+      { value: 30, color: "#047857", label: "30" }
+    ]
+  });
+  drawMacdCanvas(macdCanvas, macd);
+
+  return { rsi, macd };
+}
+
+function renderInvestorFlow() {
+  fields.foreignBuy.textContent = "-";
+  fields.foreignSell.textContent = "-";
+  fields.foreignNet.textContent = "-";
+  fields.domesticBuy.textContent = "-";
+  fields.domesticSell.textContent = "-";
+  fields.domesticNet.textContent = "-";
+  fields.flowStatus.textContent = "Yahoo Finance khong co du lieu nay";
+}
+
+function renderHistory(bars, indicators) {
+  const rows = bars
+    .map((bar, index) => ({
+      ...bar,
+      rsi: indicators.rsi[index],
+      macd: indicators.macd.macd[index]
+    }))
+    .slice(-60)
+    .reverse();
+
+  fields.historyCount.textContent = `${rows.length} phien gan nhat`;
+  fields.historyBody.innerHTML = rows.map((row) => `
+    <tr>
+      <td>${safeText(row.time)}</td>
+      <td>${formatPrice(row.open)}</td>
+      <td>${formatPrice(row.high)}</td>
+      <td>${formatPrice(row.low)}</td>
+      <td>${formatPrice(row.close)}</td>
+      <td>${formatInteger(row.volume)}</td>
+      <td>${formatOptional(row.rsi, 2)}</td>
+      <td>${formatOptional(row.macd, 2)}</td>
+    </tr>
+  `).join("");
+}
+
 function updatePriceColor(price, reference, target) {
   target.classList.remove("positive", "negative", "ceiling", "floor");
   const current = toNumber(price);
@@ -291,6 +568,9 @@ function fillData(symbol, quote, overview, bars) {
   fields.beta.textContent = safeText(overview.beta);
 
   drawChart(bars);
+  const indicators = renderIndicators(bars);
+  renderInvestorFlow();
+  renderHistory(bars, indicators);
   fields.chartRange.textContent = `${bars.length} phien gan nhat`;
 }
 
@@ -326,7 +606,14 @@ async function loadVietnamStock(symbol) {
     resolvedSymbol: quote.ticker,
     quote,
     overview,
-    recentBars: bars.slice(-30)
+    recentBars: bars.slice(-30),
+    indicators: {
+      rsi14: fields.rsiValue.textContent,
+      macd: fields.macdValue.textContent
+    },
+    investorFlow: {
+      status: "Yahoo Finance khong cung cap du lieu mua/ban theo nhom nha dau tu"
+    }
   };
   fields.rawData.textContent = JSON.stringify(latestPayload, null, 2);
   fields.lastUpdated.textContent = `Cap nhat: ${new Date().toLocaleString("vi-VN")}`;
@@ -372,6 +659,8 @@ copyButton.addEventListener("click", async () => {
 });
 
 drawChart([]);
+drawLineCanvas(rsiCanvas, []);
+drawMacdCanvas(macdCanvas, { macd: [], signal: [], histogram: [] });
 symbolInput.focus();
 
 if ("serviceWorker" in navigator) {

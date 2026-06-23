@@ -68,6 +68,66 @@
           <canvas id="priceChart" width="960" height="340" aria-label="Bieu do gia dong cua"></canvas>
         </section>
 
+        <section class="indicator-grid">
+          <article class="indicator-card">
+            <div class="section-head">
+              <h2>RSI 14</h2>
+              <span id="rsiValue">-</span>
+            </div>
+            <canvas id="rsiChart" width="460" height="220" aria-label="Bieu do RSI 14"></canvas>
+          </article>
+
+          <article class="indicator-card">
+            <div class="section-head">
+              <h2>MACD 12, 26, 9</h2>
+              <span id="macdValue">-</span>
+            </div>
+            <canvas id="macdChart" width="460" height="220" aria-label="Bieu do MACD"></canvas>
+          </article>
+        </section>
+
+        <section class="flow-section">
+          <div class="section-head">
+            <h2>Gia tri mua ban cua nha dau tu</h2>
+            <span id="flowStatus">Chua co nguon du lieu</span>
+          </div>
+          <div class="metrics-grid flow-grid">
+            <article><span>Nuoc ngoai mua</span><strong id="foreignBuy">-</strong></article>
+            <article><span>Nuoc ngoai ban</span><strong id="foreignSell">-</strong></article>
+            <article><span>Nuoc ngoai rong</span><strong id="foreignNet">-</strong></article>
+            <article><span>Trong nuoc mua</span><strong id="domesticBuy">-</strong></article>
+            <article><span>Trong nuoc ban</span><strong id="domesticSell">-</strong></article>
+            <article><span>Trong nuoc rong</span><strong id="domesticNet">-</strong></article>
+          </div>
+          <p class="note">Yahoo Finance khong cung cap du lieu mua/ban theo nhom nha dau tu. Khu vuc nay da san san de noi API khac khi co nguon du lieu phu hop.</p>
+        </section>
+
+        <section class="history-section">
+          <div class="section-head">
+            <h2>Lich su gia</h2>
+            <span id="historyCount">-</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ngay</th>
+                  <th>Mo cua</th>
+                  <th>Cao</th>
+                  <th>Thap</th>
+                  <th>Dong cua</th>
+                  <th>Khoi luong</th>
+                  <th>RSI</th>
+                  <th>MACD</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody">
+                <tr><td colspan="8">Chua co du lieu.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <section class="details-grid">
           <article class="detail-card">
             <h2>Thong tin co phieu</h2>
@@ -105,4 +165,3 @@
     <script src="script.js"></script>
   </body>
 </html>
-

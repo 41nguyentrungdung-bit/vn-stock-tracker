@@ -28,6 +28,14 @@ http://localhost:8787
 
 Khong can Alpha Vantage API key. App lay du lieu gia tu Yahoo Finance qua proxy local/Netlify Function. Khi nhap `FPT`, app se thu `FPT.VN` truoc.
 
+## Tinh nang
+
+- Gia hien tai, bien dong, khoi luong va bieu do gia dong cua.
+- RSI 14 tinh tu du lieu lich su gia dong cua.
+- MACD 12, 26, 9 tinh tu du lieu lich su gia dong cua.
+- Bang lich su 60 phien gan nhat.
+- Khu vuc gia tri mua/ban cua nha dau tu da co san trong giao dien, nhung Yahoo Finance khong cung cap du lieu mua/ban theo nhom nha dau tu.
+
 ## Dua len website
 
 Nen deploy bang Git/Netlify project de Netlify Function hoat dong. Neu chi mo bang `file://`, trinh duyet co the bao `Failed to fetch` vi API chung khoan chan CORS.
