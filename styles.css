@@ -499,6 +499,54 @@ strong.negative {
   padding: 16px;
 }
 
+.score-analysis {
+  display: grid;
+  gap: 14px;
+  color: var(--text);
+}
+
+.score-hero {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--soft);
+}
+
+.score-hero h3,
+.score-block h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.score-hero p,
+.score-block p {
+  margin: 6px 0;
+  line-height: 1.55;
+}
+
+.score-block {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.score-points {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+
+.score-tag {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #fff1f2;
+  color: var(--primary);
+  font-weight: 800;
+}
+
 .score-table {
   min-width: 420px;
 }

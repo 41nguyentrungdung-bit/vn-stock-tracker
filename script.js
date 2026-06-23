@@ -60,6 +60,8 @@ const fields = {
   flowStatus: document.getElementById("flowStatus"),
   historyCount: document.getElementById("historyCount"),
   historyBody: document.getElementById("historyBody"),
+  scoreTotalBadge: document.getElementById("scoreTotalBadge"),
+  scoreAnalysis: document.getElementById("scoreAnalysis"),
   rawData: document.getElementById("rawData")
 };
 
@@ -630,13 +632,287 @@ function updatePriceColor(price, reference, target) {
 function renderMovingAverages(bars) {
   const movingAverages = calculateMovingAverages(bars);
   const latestValue = (series) => [...series].reverse().find((value) => value !== null);
+  const currentPrice = bars[bars.length - 1]?.close;
+  const renderMa = (target, value) => {
+    target.textContent = formatOptional(value, 2);
+    target.classList.remove("positive", "negative");
+    if (toNumber(value) === null || toNumber(currentPrice) === null) return;
+    if (value > currentPrice) target.classList.add("positive");
+    if (value < currentPrice) target.classList.add("negative");
+  };
 
-  fields.ma10.textContent = formatOptional(latestValue(movingAverages.ma10), 2);
-  fields.ma50.textContent = formatOptional(latestValue(movingAverages.ma50), 2);
-  fields.ma100.textContent = formatOptional(latestValue(movingAverages.ma100), 2);
-  fields.ma200.textContent = formatOptional(latestValue(movingAverages.ma200), 2);
+  renderMa(fields.ma10, latestValue(movingAverages.ma10));
+  renderMa(fields.ma50, latestValue(movingAverages.ma50));
+  renderMa(fields.ma100, latestValue(movingAverages.ma100));
+  renderMa(fields.ma200, latestValue(movingAverages.ma200));
 
   return movingAverages;
+}
+
+function latestNonNull(series) {
+  return [...series].reverse().find((value) => value !== null);
+}
+
+function escapeHtml(value) {
+  return safeText(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function average(values) {
+  const filtered = values.filter((value) => toNumber(value) !== null);
+  if (!filtered.length) return null;
+  return filtered.reduce((sum, value) => sum + value, 0) / filtered.length;
+}
+
+function findSupportResistance(bars, currentPrice) {
+  const recent = bars.slice(-80);
+  const supports = recent
+    .map((bar) => bar.low)
+    .filter((value) => toNumber(value) !== null && value < currentPrice)
+    .sort((a, b) => b - a);
+  const resistances = recent
+    .map((bar) => bar.high)
+    .filter((value) => toNumber(value) !== null && value > currentPrice)
+    .sort((a, b) => a - b);
+
+  return {
+    support1: supports[0] ?? null,
+    support2: supports[Math.min(9, supports.length - 1)] ?? null,
+    resistance1: resistances[0] ?? null,
+    resistance2: resistances[Math.min(9, resistances.length - 1)] ?? null
+  };
+}
+
+function scoreStock(symbol, quote, overview, bars, movingAverages, indicators) {
+  const latestBar = bars[bars.length - 1] || {};
+  const currentPrice = quote.price ?? latestBar.close;
+  const ma50 = latestNonNull(movingAverages.ma50);
+  const ma100 = latestNonNull(movingAverages.ma100);
+  const ma200 = latestNonNull(movingAverages.ma200);
+  const latestRsi = latestNonNull(indicators.rsi);
+  const latestMacd = latestNonNull(indicators.macd.macd);
+  const latestSignal = latestNonNull(indicators.macd.signal);
+  const latestHistogram = latestNonNull(indicators.macd.histogram);
+  const change30 = bars.length > 31 ? ((currentPrice - bars[bars.length - 31].close) / bars[bars.length - 31].close) * 100 : null;
+  const volumes = bars.map((bar) => bar.volume);
+  const avgVolume20 = average(volumes.slice(-20));
+  const avgVolume60 = average(volumes.slice(-60));
+  const latestVolume = latestBar.volume;
+  const levels = findSupportResistance(bars, currentPrice);
+  const stopPrice = levels.support1 ? levels.support1 * 0.98 : currentPrice * 0.95;
+  const targetPrice = levels.resistance1 || currentPrice * 1.15;
+  const riskPercent = ((currentPrice - stopPrice) / currentPrice) * 100;
+  const rewardPercent = ((targetPrice - currentPrice) / currentPrice) * 100;
+  const riskReward = riskPercent > 0 ? rewardPercent / riskPercent : null;
+
+  let trendScore = 0;
+  if (currentPrice > ma50) trendScore += 6;
+  if (currentPrice > ma200) trendScore += 5;
+  if (ma50 > ma100) trendScore += 5;
+  if (ma100 > ma200) trendScore += 5;
+  if (toNumber(change30) !== null && change30 > 0) trendScore += 4;
+  trendScore = Math.min(trendScore, 25);
+
+  let volumeScore = 4;
+  if (latestVolume && avgVolume20 && latestVolume >= avgVolume20) volumeScore += 6;
+  if (avgVolume20 && avgVolume60 && avgVolume20 >= avgVolume60) volumeScore += 5;
+  if (toNumber(change30) !== null && change30 > 0) volumeScore += 3;
+  if (latestVolume) volumeScore += 2;
+  volumeScore = Math.min(volumeScore, 20);
+
+  let rsiScore = 5;
+  if (latestRsi >= 50 && latestRsi <= 65) rsiScore = 10;
+  else if (latestRsi > 65 && latestRsi <= 75) rsiScore = 8;
+  else if (latestRsi >= 40 && latestRsi < 50) rsiScore = 7;
+  else if (latestRsi >= 30 && latestRsi < 40) rsiScore = 6;
+  else if (latestRsi > 75) rsiScore = 5;
+  else if (latestRsi < 30) rsiScore = 4;
+
+  let macdScore = 3;
+  if (latestMacd > latestSignal) macdScore += 4;
+  if (latestHistogram > 0) macdScore += 2;
+  if (latestMacd > 0) macdScore += 1;
+  macdScore = Math.min(macdScore, 10);
+
+  const distanceToSupport = levels.support1 ? ((currentPrice - levels.support1) / currentPrice) * 100 : null;
+  let srScore = 4;
+  if (distanceToSupport !== null && distanceToSupport <= 5) srScore += 3;
+  if (riskReward !== null && riskReward >= 2) srScore += 2;
+  if (levels.resistance1) srScore += 1;
+  srScore = Math.min(srScore, 10);
+
+  const fundamentalScore = overview.name && overview.name !== symbol ? 6 : 5;
+  const industryScore = overview.exchange ? 6 : 5;
+  let rrScore = 2;
+  if (riskReward >= 3) rrScore = 5;
+  else if (riskReward >= 2) rrScore = 4;
+  else if (riskReward >= 1.3) rrScore = 3;
+
+  const total = trendScore + volumeScore + rsiScore + macdScore + srScore + fundamentalScore + industryScore + rrScore;
+
+  return {
+    total,
+    trendScore,
+    volumeScore,
+    rsiScore,
+    macdScore,
+    srScore,
+    fundamentalScore,
+    industryScore,
+    rrScore,
+    currentPrice,
+    ma50,
+    ma100,
+    ma200,
+    latestRsi,
+    latestMacd,
+    latestSignal,
+    latestHistogram,
+    change30,
+    avgVolume20,
+    avgVolume60,
+    latestVolume,
+    levels,
+    stopPrice,
+    targetPrice,
+    riskPercent,
+    rewardPercent,
+    riskReward
+  };
+}
+
+function conclusionForScore(total) {
+  if (total >= 85) return "Mua rat manh theo he thong";
+  if (total >= 75) return "Mua manh theo he thong";
+  if (total >= 65) return "Theo doi mua / mua tung phan";
+  if (total >= 50) return "Trung tinh, can them tin hieu xac nhan";
+  return "Yeu, chua nen uu tien";
+}
+
+function renderScoreAnalysis(symbol, quote, overview, bars, movingAverages, indicators) {
+  const score = scoreStock(symbol, quote, overview, bars, movingAverages, indicators);
+  const name = safeText(overview.name) !== "-" ? overview.name : symbol;
+  const macdState = score.latestMacd > score.latestSignal ? "MACD dang nam tren Signal" : "MACD dang nam duoi Signal";
+  const trendState = score.currentPrice > score.ma50 && score.ma50 > score.ma100 && score.ma100 > score.ma200
+    ? "Xu huong gia dang rat tich cuc: gia tren MA50 va MA50 > MA100 > MA200."
+    : "Xu huong chua dong thuan hoan toan giua gia va cac duong MA lon.";
+  const rsiState = score.latestRsi >= 50 && score.latestRsi <= 65
+    ? "RSI nam trong vung khoe, chua qua nong."
+    : score.latestRsi > 70
+      ? "RSI dang cao, can de y rui ro rung lac ngan han."
+      : "RSI chua cho tin hieu suc manh ro rang.";
+  const rrText = score.riskReward === null ? "-" : `${formatNumber(score.riskReward, 2)} : 1`;
+  const upgradeText = [
+    score.latestMacd <= score.latestSignal ? "MACD cat len Signal" : null,
+    score.latestRsi < 55 ? "RSI vuot lai tren 55" : null,
+    score.levels.resistance1 ? `Gia vuot ${formatPrice(score.levels.resistance1)} voi volume tot` : "Gia vuot khang cu gan",
+    score.latestVolume < score.avgVolume20 ? "Volume vuot trung binh 20 phien" : null
+  ].filter(Boolean);
+
+  fields.scoreTotalBadge.textContent = `${score.total}/100 diem`;
+  fields.scoreAnalysis.innerHTML = `
+    <div class="score-hero">
+      <h3>${escapeHtml(symbol)} - ${escapeHtml(name)}</h3>
+      <p><strong>Gia hien tai:</strong> ${formatPrice(score.currentPrice)}</p>
+      <p><strong>Ket luan:</strong> ${conclusionForScore(score.total)}.</p>
+      <span class="score-tag">${score.total}/100</span>
+    </div>
+
+    <div class="score-block">
+      <h3>1. Xu huong (${score.trendScore}/25)</h3>
+      <p>${trendState}</p>
+      <ul class="score-points">
+        <li>Gia hien tai: ${formatPrice(score.currentPrice)}</li>
+        <li>MA50: ${formatOptional(score.ma50, 2)}, MA100: ${formatOptional(score.ma100, 2)}, MA200: ${formatOptional(score.ma200, 2)}</li>
+        <li>Bien dong 30 phien: ${formatPercent(score.change30)}</li>
+      </ul>
+    </div>
+
+    <div class="score-block">
+      <h3>2. Volume - Dong tien (${score.volumeScore}/20)</h3>
+      <p>Thanh khoan phien gan nhat duoc so sanh voi trung binh 20 va 60 phien.</p>
+      <ul class="score-points">
+        <li>Volume gan nhat: ${formatInteger(score.latestVolume)}</li>
+        <li>Volume TB20: ${formatInteger(score.avgVolume20)}</li>
+        <li>Volume TB60: ${formatInteger(score.avgVolume60)}</li>
+      </ul>
+    </div>
+
+    <div class="score-block">
+      <h3>3. RSI (${score.rsiScore}/10)</h3>
+      <p>${rsiState}</p>
+      <p>RSI 14 hien tai: <strong>${formatOptional(score.latestRsi, 2)}</strong>.</p>
+    </div>
+
+    <div class="score-block">
+      <h3>4. MACD (${score.macdScore}/10)</h3>
+      <p>${macdState}. Histogram hien tai: ${formatOptional(score.latestHistogram, 2)}.</p>
+      <p>MACD: ${formatOptional(score.latestMacd, 2)} / Signal: ${formatOptional(score.latestSignal, 2)}.</p>
+    </div>
+
+    <div class="score-block">
+      <h3>5. Ho tro - Khang cu (${score.srScore}/10)</h3>
+      <ul class="score-points">
+        <li>Ho tro gan: ${formatPrice(score.levels.support1)}</li>
+        <li>Ho tro sau: ${formatPrice(score.levels.support2)}</li>
+        <li>Khang cu gan: ${formatPrice(score.levels.resistance1)}</li>
+        <li>Khang cu sau: ${formatPrice(score.levels.resistance2)}</li>
+      </ul>
+    </div>
+
+    <div class="score-block">
+      <h3>6. Co ban - Tin tuc (${score.fundamentalScore}/10)</h3>
+      <p>Nguon du lieu hien tai chua co tin tuc va bao cao co ban chi tiet, nen diem nay duoc cham o muc trung tinh. Nen bo sung du lieu tin tuc/API co ban neu muon cham sau hon.</p>
+    </div>
+
+    <div class="score-block">
+      <h3>7. Suc manh nganh (${score.industryScore}/10)</h3>
+      <p>Yahoo Finance khong cung cap day du suc manh nganh theo thi truong Viet Nam trong app hien tai, nen diem nay la diem trung tinh co dieu kien.</p>
+    </div>
+
+    <div class="score-block">
+      <h3>8. Risk / Reward (${score.rrScore}/5)</h3>
+      <ul class="score-points">
+        <li>Gia mua tham chieu: ${formatPrice(score.currentPrice)}</li>
+        <li>Cat lo goi y: ${formatPrice(score.stopPrice)} (${formatPercent(-score.riskPercent)})</li>
+        <li>Muc tieu gan: ${formatPrice(score.targetPrice)} (${formatPercent(score.rewardPercent)})</li>
+        <li>Ty le Reward/Risk: ${rrText}</li>
+      </ul>
+    </div>
+
+    <div class="score-block">
+      <h3>Tong diem</h3>
+      <div class="table-wrap score-table-wrap">
+        <table class="score-table">
+          <thead><tr><th>Tieu chi</th><th>Diem</th></tr></thead>
+          <tbody>
+            <tr><td>Xu huong</td><td>${score.trendScore}/25</td></tr>
+            <tr><td>Volume - Dong tien</td><td>${score.volumeScore}/20</td></tr>
+            <tr><td>RSI</td><td>${score.rsiScore}/10</td></tr>
+            <tr><td>MACD</td><td>${score.macdScore}/10</td></tr>
+            <tr><td>Ho tro / Khang cu</td><td>${score.srScore}/10</td></tr>
+            <tr><td>Co ban - Tin tuc</td><td>${score.fundamentalScore}/10</td></tr>
+            <tr><td>Suc manh nganh</td><td>${score.industryScore}/10</td></tr>
+            <tr><td>Risk / Reward</td><td>${score.rrScore}/5</td></tr>
+            <tr class="total-row"><td>Tong</td><td>${score.total}/100</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="score-block">
+      <h3>Ket luan va ke hoach</h3>
+      <p><strong>${escapeHtml(symbol)} = ${score.total}/100.</strong> ${conclusionForScore(score.total)}.</p>
+      <p>Neu tham gia, co the chia vi the theo tung phan thay vi mua mot lan: mot phan o vung hien tai, mot phan khi MACD xac nhan, va mot phan khi gia vuot khang cu voi volume tot.</p>
+      <p>Dieu kien de nang diem: ${upgradeText.length ? upgradeText.join("; ") : "cac tin hieu ky thuat chinh hien da kha tich cuc, can duy tri thanh khoan va xu huong."}</p>
+    </div>
+  `;
+
+  return score;
 }
 
 function fillData(symbol, quote, overview, bars) {
@@ -685,7 +961,9 @@ function fillData(symbol, quote, overview, bars) {
   renderPriceChanges(bars);
   renderInvestorFlow();
   renderHistory(bars);
+  const score = renderScoreAnalysis(symbol, quote, overview, bars, movingAverages, indicators);
   fields.chartRange.textContent = `${bars.length} phien gan nhat`;
+  return { movingAverages, indicators, score };
 }
 
 async function loadVietnamStock(symbol) {
@@ -713,7 +991,7 @@ async function loadVietnamStock(symbol) {
   const overview = parsed.overview;
   const bars = parsed.bars.slice(-260);
 
-  fillData(symbol, quote, overview, bars);
+  const analysis = fillData(symbol, quote, overview, bars);
   latestPayload = {
     source: "Yahoo Finance chart API",
     symbol,
@@ -731,6 +1009,7 @@ async function loadVietnamStock(symbol) {
         ma200: fields.ma200.textContent
       }
     },
+    score: analysis.score,
     investorFlow: {
       status: "Yahoo Finance khong cung cap du lieu mua/ban theo nhom nha dau tu"
     }

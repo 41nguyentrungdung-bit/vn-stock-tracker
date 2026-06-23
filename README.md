@@ -37,6 +37,7 @@ Khong can Alpha Vantage API key. App lay du lieu gia tu Yahoo Finance qua proxy 
 - Bang lich su 60 phien gan nhat, co mau xanh/do cho gia dong cua va % thay doi theo tung phien.
 - Vung tong hop % thay doi gia trong 3, 7, 10, 14, 21, 30 phien.
 - Tab bang danh gia theo thang diem 100.
+- Bang danh gia tu dong cap nhat theo ma dang tra cuu, gom xu huong, volume, RSI, MACD, ho tro/khang cu, co ban/tin tuc, suc manh nganh va risk/reward.
 - Khu vuc gia tri mua/ban cua nha dau tu da co san trong giao dien, nhung Yahoo Finance khong cung cap du lieu mua/ban theo nhom nha dau tu.
 
 ## Dua len website
