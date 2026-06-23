@@ -637,8 +637,8 @@ function renderMovingAverages(bars) {
     target.textContent = formatOptional(value, 2);
     target.classList.remove("positive", "negative");
     if (toNumber(value) === null || toNumber(currentPrice) === null) return;
-    if (value > currentPrice) target.classList.add("positive");
-    if (value < currentPrice) target.classList.add("negative");
+    if (currentPrice > value) target.classList.add("positive");
+    if (currentPrice < value) target.classList.add("negative");
   };
 
   renderMa(fields.ma10, latestValue(movingAverages.ma10));
@@ -917,14 +917,15 @@ function renderScoreAnalysis(symbol, quote, overview, bars, movingAverages, indi
 
 function fillData(symbol, quote, overview, bars) {
   const latestBar = bars[bars.length - 1] || {};
-  const currentPrice = quote.price ?? latestBar.close;
-  const reference = quote.referencePrice;
-  const change = quote.change ?? (toNumber(currentPrice) !== null && toNumber(reference) !== null
+  const previousBar = bars[bars.length - 2] || {};
+  const currentPrice = latestBar.close ?? quote.price;
+  const reference = previousBar.close ?? quote.referencePrice;
+  const change = toNumber(currentPrice) !== null && toNumber(reference) !== null
     ? toNumber(currentPrice) - toNumber(reference)
-    : null);
-  const changePercent = quote.changePercent ?? (toNumber(change) !== null && toNumber(reference)
+    : null;
+  const changePercent = toNumber(change) !== null && toNumber(reference)
     ? (toNumber(change) / toNumber(reference)) * 100
-    : null);
+    : null;
 
   fields.exchange.textContent = `${symbol} ${overview.exchange || quote.exchange ? "- " + safeText(overview.exchange || quote.exchange) : ""}`;
   fields.companyName.textContent = safeText(overview.name) !== "-" ? overview.name : symbol;
