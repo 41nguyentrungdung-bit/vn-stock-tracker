@@ -207,6 +207,20 @@ async function requestJson(path) {
   return response.json();
 }
 
+async function requestVciData(symbol) {
+  if (location.protocol === "file:") {
+    throw new Error("Dang mo bang file:// nen khong co proxy du lieu. Hay chay local-server.js roi mo http://localhost:8787.");
+  }
+
+  const response = await fetch(`${PROXY_BASE}?source=vci&symbol=${encodeURIComponent(symbol)}`, {
+    headers: { accept: "application/json" }
+  });
+  if (!response.ok) {
+    throw new Error(`VCI khong tai duoc du lieu. HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
 function getFirstRecord(data) {
   if (Array.isArray(data)) return data[0] || {};
   if (Array.isArray(data?.data)) return data.data[0] || {};
@@ -247,6 +261,7 @@ function parseYahooChart(rawData) {
     : null;
 
   return {
+    source: "Yahoo Finance",
     quote: {
       ticker: meta.symbol,
       exchange: meta.fullExchangeName || meta.exchangeName,
@@ -276,6 +291,81 @@ function parseYahooChart(rawData) {
       currency: meta.currency,
       fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh,
       fiftyTwoWeekLow: meta.fiftyTwoWeekLow
+    },
+    bars
+  };
+}
+
+function boardName(value) {
+  const text = safeText(value).toUpperCase();
+  if (text === "HSX") return "HOSE";
+  if (text === "HNX") return "HNX";
+  if (text === "UPCOM") return "UPCOM";
+  return text === "-" ? "" : text;
+}
+
+function parseVciData(rawData) {
+  const chart = rawData?.chart?.[0];
+  if (!chart || !Array.isArray(chart.c) || !chart.c.length) return null;
+
+  const board = rawData?.board?.[0] || {};
+  const listing = board.listingInfo || {};
+  const match = board.matchPrice || {};
+  const exchange = boardName(listing.board);
+  const bars = chart.c.map((close, index) => ({
+    time: new Date(Number(chart.t[index]) * 1000).toLocaleDateString("vi-VN"),
+    open: toNumber(chart.o?.[index]),
+    high: toNumber(chart.h?.[index]),
+    low: toNumber(chart.l?.[index]),
+    close: toNumber(close),
+    volume: toNumber(chart.v?.[index])
+  })).filter((item) => item.close !== null);
+
+  const latestBar = bars[bars.length - 1] || {};
+  const previousBar = bars[bars.length - 2] || {};
+  const price = match.matchPrice || latestBar.close;
+  const previousClose = match.referencePrice || previousBar.close;
+  const change = toNumber(price) !== null && toNumber(previousClose) !== null
+    ? toNumber(price) - toNumber(previousClose)
+    : null;
+  const changePercent = toNumber(change) !== null && toNumber(previousClose)
+    ? (toNumber(change) / toNumber(previousClose)) * 100
+    : null;
+  const totalValue = toNumber(match.accumulatedValue) !== null ? match.accumulatedValue * 1_000_000 : null;
+
+  return {
+    source: "Vietcap/VCI",
+    quote: {
+      ticker: rawData.symbol || chart.symbol || listing.symbol,
+      exchange,
+      price,
+      referencePrice: previousClose,
+      ceilingPrice: listing.ceiling ?? match.ceilingPrice,
+      floorPrice: listing.floor ?? match.floorPrice,
+      highPrice: match.highest ?? latestBar.high,
+      lowPrice: match.lowest ?? latestBar.low,
+      volume: match.accumulatedVolume ?? latestBar.volume,
+      change,
+      changePercent,
+      tradingDate: listing.tradingDate,
+      foreignBuyValue: match.foreignBuyValue,
+      foreignSellValue: match.foreignSellValue,
+      totalValue
+    },
+    overview: {
+      ticker: rawData.symbol || chart.symbol || listing.symbol,
+      name: listing.enOrganName || listing.organName || listing.organShortName || listing.symbol,
+      exchange,
+      industry: "-",
+      sector: "-",
+      description: `Du lieu gia lay tu Vietcap/VCI cho ma ${rawData.symbol || chart.symbol}. San: ${exchange || "-"}.`,
+      marketCap: null,
+      pe: null,
+      pb: null,
+      roe: null,
+      eps: null,
+      beta: null,
+      currency: "VND"
     },
     bars
   };
@@ -607,14 +697,28 @@ function renderIndicators(bars) {
   return { rsi, macd };
 }
 
-function renderInvestorFlow() {
-  fields.foreignBuy.textContent = "-";
-  fields.foreignSell.textContent = "-";
-  fields.foreignNet.textContent = "-";
-  fields.domesticBuy.textContent = "-";
-  fields.domesticSell.textContent = "-";
-  fields.domesticNet.textContent = "-";
-  fields.flowStatus.textContent = "Yahoo Finance khong co du lieu nay";
+function renderInvestorFlow(quote) {
+  const foreignBuy = toNumber(quote.foreignBuyValue);
+  const foreignSell = toNumber(quote.foreignSellValue);
+  const totalValue = toNumber(quote.totalValue);
+  const foreignNet = foreignBuy !== null && foreignSell !== null ? foreignBuy - foreignSell : null;
+  const domesticBuy = totalValue !== null && foreignBuy !== null ? totalValue - foreignBuy : null;
+  const domesticSell = totalValue !== null && foreignSell !== null ? totalValue - foreignSell : null;
+  const domesticNet = foreignNet !== null ? -foreignNet : null;
+
+  fields.foreignBuy.textContent = formatLargeNumber(foreignBuy);
+  fields.foreignSell.textContent = formatLargeNumber(foreignSell);
+  fields.foreignNet.textContent = formatLargeNumber(foreignNet);
+  fields.domesticBuy.textContent = formatLargeNumber(domesticBuy);
+  fields.domesticSell.textContent = formatLargeNumber(domesticSell);
+  fields.domesticNet.textContent = formatLargeNumber(domesticNet);
+  fields.foreignNet.classList.remove("positive", "negative");
+  fields.domesticNet.classList.remove("positive", "negative");
+  const foreignClass = valueClass(foreignNet);
+  const domesticClass = valueClass(domesticNet);
+  if (foreignClass) fields.foreignNet.classList.add(foreignClass);
+  if (domesticClass) fields.domesticNet.classList.add(domesticClass);
+  fields.flowStatus.textContent = foreignBuy !== null ? "Du lieu tu Vietcap/VCI" : "Chua co du lieu";
 }
 
 function renderHistory(bars) {
@@ -997,7 +1101,7 @@ function fillData(symbol, quote, overview, bars) {
   const movingAverages = renderMovingAverages(bars);
   const indicators = renderIndicators(bars);
   renderPriceChanges(bars);
-  renderInvestorFlow();
+  renderInvestorFlow(quote);
   renderHistory(bars);
   const score = renderScoreAnalysis(symbol, quote, overview, bars, movingAverages, indicators);
   fields.chartRange.textContent = `${bars.length} phien gan nhat`;
@@ -1009,7 +1113,15 @@ async function loadVietnamStock(symbol) {
 
   let parsed = null;
   let lastError = null;
-  const candidates = makeYahooCandidates(symbol);
+
+  try {
+    const rawVci = await requestVciData(symbol);
+    parsed = parseVciData(rawVci);
+  } catch (error) {
+    lastError = error;
+  }
+
+  const candidates = parsed ? [] : makeYahooCandidates(symbol);
 
   for (const candidate of candidates) {
     try {
@@ -1031,7 +1143,7 @@ async function loadVietnamStock(symbol) {
 
   const analysis = fillData(symbol, quote, overview, bars);
   latestPayload = {
-    source: "Yahoo Finance chart API",
+    source: parsed.source,
     symbol,
     resolvedSymbol: quote.ticker,
     quote,
@@ -1049,7 +1161,9 @@ async function loadVietnamStock(symbol) {
     },
     score: analysis.score,
     investorFlow: {
-      status: "Yahoo Finance khong cung cap du lieu mua/ban theo nhom nha dau tu"
+      status: parsed.source === "Vietcap/VCI"
+        ? "Du lieu bang gia VCI neu co"
+        : "Yahoo Finance khong cung cap du lieu mua/ban theo nhom nha dau tu"
     }
   };
   fields.rawData.textContent = JSON.stringify(latestPayload, null, 2);

@@ -26,7 +26,7 @@ http://localhost:8787
 3. Nhap ma chung khoan Viet Nam.
 4. Bam `Tai du lieu`.
 
-Khong can Alpha Vantage API key. App lay du lieu gia tu Yahoo Finance qua proxy local/Netlify Function. Khi nhap `FPT`, app se thu `FPT.VN` truoc.
+Khong can Alpha Vantage API key. App uu tien lay du lieu tu Vietcap/VCI de ho tro HOSE, HNX, UPCOM; neu VCI loi moi fallback sang Yahoo Finance.
 
 ## Tinh nang
 
@@ -40,7 +40,7 @@ Khong can Alpha Vantage API key. App lay du lieu gia tu Yahoo Finance qua proxy 
 - Vung tong hop % thay doi gia trong 3, 7, 10, 14, 21, 30 phien.
 - Tab bang danh gia theo thang diem 100.
 - Bang danh gia tu dong cap nhat theo ma dang tra cuu, gom xu huong, volume, RSI, MACD, ho tro/khang cu, co ban/tin tuc, suc manh nganh va risk/reward.
-- Khu vuc gia tri mua/ban cua nha dau tu da co san trong giao dien, nhung Yahoo Finance khong cung cap du lieu mua/ban theo nhom nha dau tu.
+- Gia tri mua/ban nuoc ngoai va uoc tinh trong nuoc lay tu du lieu bang gia VCI khi nguon tra ve.
 
 ## Dua len website
 

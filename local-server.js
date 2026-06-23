@@ -4,6 +4,7 @@ const path = require("path");
 
 const PORT = 8787;
 const API_BASE = "https://query1.finance.yahoo.com";
+const VCI_TRADING_BASE = "https://trading.vietcap.com.vn/api";
 const ROOT = __dirname;
 
 const MIME_TYPES = {
@@ -28,6 +29,56 @@ function sendJson(res, statusCode, body) {
 }
 
 async function handleProxy(req, res, url) {
+  if (url.searchParams.get("source") === "vci") {
+    const symbol = (url.searchParams.get("symbol") || "").toUpperCase();
+    if (!/^[A-Z0-9]{2,12}$/.test(symbol)) {
+      sendJson(res, 400, { error: "Missing or invalid symbol" });
+      return;
+    }
+
+    const now = Math.floor(Date.now() / 1000) + 86400;
+    const from = now - 86400 * 730;
+    const headers = {
+      accept: "application/json, text/plain, */*",
+      "content-type": "application/json",
+      referer: "https://trading.vietcap.com.vn/",
+      origin: "https://trading.vietcap.com.vn",
+      "user-agent": "Mozilla/5.0"
+    };
+
+    try {
+      const [chartResponse, boardResponse] = await Promise.all([
+        fetch(`${VCI_TRADING_BASE}/chart/OHLCChart/gap`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            timeFrame: "ONE_DAY",
+            symbols: [symbol],
+            from,
+            to: now
+          })
+        }),
+        fetch(`${VCI_TRADING_BASE}/price/symbols/getList`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ symbols: [symbol] })
+        })
+      ]);
+
+      const chart = await chartResponse.json();
+      const board = await boardResponse.json();
+      sendJson(res, chartResponse.ok && boardResponse.ok ? 200 : 502, {
+        source: "VCI",
+        symbol,
+        chart,
+        board
+      });
+    } catch (error) {
+      sendJson(res, 502, { error: "VCI request failed", details: error.message });
+    }
+    return;
+  }
+
   const apiPath = url.searchParams.get("path");
 
   if (!apiPath || !apiPath.startsWith("/")) {
