@@ -1,0 +1,19 @@
+{
+  "name": "Theo doi chung khoan Viet Nam",
+  "short_name": "CK Viet Nam",
+  "description": "Website theo doi gia va chi so cua cac ma chung khoan Viet Nam.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fff7ed",
+  "theme_color": "#7f1d1d",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
+

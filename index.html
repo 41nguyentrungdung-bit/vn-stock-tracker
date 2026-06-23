@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#7f1d1d">
+    <title>Theo doi chung khoan Viet Nam</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app">
+      <section class="shell">
+        <header class="hero">
+          <div>
+            <span class="eyebrow">HOSE / HNX / UPCOM</span>
+            <h1>Theo doi chung khoan Viet Nam</h1>
+            <p>Nhap ma co phieu Viet Nam de xem gia, san giao dich, khoi luong, bien dong va bieu do lich su.</p>
+          </div>
+          <span id="lastUpdated" class="pill">Chua tai du lieu</span>
+        </header>
+
+        <form id="stockForm" class="search-panel">
+          <label for="symbol">Ma chung khoan</label>
+          <div class="input-row">
+            <input id="symbol" type="text" autocomplete="off" placeholder="Vi du: FPT, VNM, VCB, HPG">
+            <button type="submit">Tai du lieu</button>
+          </div>
+          <div class="quick-symbols" aria-label="Ma pho bien">
+            <button type="button" data-symbol="FPT">FPT</button>
+            <button type="button" data-symbol="VNM">VNM</button>
+            <button type="button" data-symbol="VCB">VCB</button>
+            <button type="button" data-symbol="HPG">HPG</button>
+            <button type="button" data-symbol="MWG">MWG</button>
+            <button type="button" data-symbol="SSI">SSI</button>
+          </div>
+          <p id="message" class="message" role="status"></p>
+        </form>
+
+        <section class="quote-card">
+          <div>
+            <span id="exchange" class="eyebrow">-</span>
+            <h2 id="companyName">Nhap ma chung khoan Viet Nam de bat dau</h2>
+            <p id="companyDescription">App chi theo doi cac ma co phieu Viet Nam. Khong can Alpha Vantage API key.</p>
+          </div>
+          <div class="price-box">
+            <span>Gia hien tai</span>
+            <strong id="currentPrice">-</strong>
+            <em id="priceChange">-</em>
+          </div>
+        </section>
+
+        <section class="metrics-grid" aria-label="Chi so giao dich">
+          <article><span>Tham chieu</span><strong id="referencePrice">-</strong></article>
+          <article><span>Tran</span><strong id="ceilingPrice">-</strong></article>
+          <article><span>San</span><strong id="floorPrice">-</strong></article>
+          <article><span>Cao nhat</span><strong id="highPrice">-</strong></article>
+          <article><span>Thap nhat</span><strong id="lowPrice">-</strong></article>
+          <article><span>Khoi luong</span><strong id="volume">-</strong></article>
+        </section>
+
+        <section class="chart-section">
+          <div class="section-head">
+            <h2>Bieu do gia dong cua</h2>
+            <span id="chartRange">Gan 120 phien</span>
+          </div>
+          <canvas id="priceChart" width="960" height="340" aria-label="Bieu do gia dong cua"></canvas>
+        </section>
+
+        <section class="details-grid">
+          <article class="detail-card">
+            <h2>Thong tin co phieu</h2>
+            <dl>
+              <div><dt>Ma</dt><dd id="ticker">-</dd></div>
+              <div><dt>San</dt><dd id="listedExchange">-</dd></div>
+              <div><dt>Nganh</dt><dd id="industry">-</dd></div>
+              <div><dt>Nhom nganh</dt><dd id="sector">-</dd></div>
+              <div><dt>Von hoa</dt><dd id="marketCap">-</dd></div>
+            </dl>
+          </article>
+
+          <article class="detail-card">
+            <h2>Chi so co ban</h2>
+            <dl>
+              <div><dt>P/E</dt><dd id="peRatio">-</dd></div>
+              <div><dt>P/B</dt><dd id="pbRatio">-</dd></div>
+              <div><dt>ROE</dt><dd id="roe">-</dd></div>
+              <div><dt>EPS</dt><dd id="eps">-</dd></div>
+              <div><dt>Beta</dt><dd id="beta">-</dd></div>
+            </dl>
+          </article>
+        </section>
+
+        <section class="raw-section">
+          <div class="section-head">
+            <h2>Du lieu gan day</h2>
+            <button id="copyButton" type="button" class="secondary">Copy JSON</button>
+          </div>
+          <pre id="rawData">Chua co du lieu.</pre>
+        </section>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
+

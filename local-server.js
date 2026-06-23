@@ -1,0 +1,100 @@
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
+
+const PORT = 8787;
+const API_BASE = "https://query1.finance.yahoo.com";
+const ROOT = __dirname;
+
+const MIME_TYPES = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".svg": "image/svg+xml; charset=utf-8"
+};
+
+const ALLOWED_PREFIXES = [
+  "/v8/finance/chart/"
+];
+
+function sendJson(res, statusCode, body) {
+  res.writeHead(statusCode, {
+    "content-type": "application/json; charset=utf-8",
+    "access-control-allow-origin": "*"
+  });
+  res.end(JSON.stringify(body));
+}
+
+async function handleProxy(req, res, url) {
+  const apiPath = url.searchParams.get("path");
+
+  if (!apiPath || !apiPath.startsWith("/")) {
+    sendJson(res, 400, { error: "Missing or invalid path" });
+    return;
+  }
+
+  if (!ALLOWED_PREFIXES.some((prefix) => apiPath.startsWith(prefix))) {
+    sendJson(res, 403, { error: "Path is not allowed" });
+    return;
+  }
+
+  try {
+    const upstream = await fetch(`${API_BASE}${apiPath}`, {
+      headers: {
+        accept: "application/json",
+        "user-agent": "stock-tracker-vietnam-local/1.0"
+      }
+    });
+    const text = await upstream.text();
+    res.writeHead(upstream.status, {
+      "content-type": upstream.headers.get("content-type") || "application/json; charset=utf-8",
+      "access-control-allow-origin": "*"
+    });
+    res.end(text);
+  } catch (error) {
+    sendJson(res, 502, {
+      error: "Upstream request failed",
+      details: error.message
+    });
+  }
+}
+
+function handleStatic(req, res, url) {
+  const requestedPath = url.pathname === "/" ? "/index.html" : decodeURIComponent(url.pathname);
+  const filePath = path.normalize(path.join(ROOT, requestedPath));
+
+  if (!filePath.startsWith(ROOT)) {
+    res.writeHead(403);
+    res.end("Forbidden");
+    return;
+  }
+
+  fs.readFile(filePath, (error, content) => {
+    if (error) {
+      res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+      res.end("Not found");
+      return;
+    }
+
+    const ext = path.extname(filePath);
+    res.writeHead(200, { "content-type": MIME_TYPES[ext] || "application/octet-stream" });
+    res.end(content);
+  });
+}
+
+const server = http.createServer((req, res) => {
+  const url = new URL(req.url, `http://localhost:${PORT}`);
+
+  if (url.pathname === "/.netlify/functions/vn-stock") {
+    handleProxy(req, res, url);
+    return;
+  }
+
+  handleStatic(req, res, url);
+});
+
+server.listen(PORT, () => {
+  console.log(`Stock tracker dang chay tai http://localhost:${PORT}`);
+});
