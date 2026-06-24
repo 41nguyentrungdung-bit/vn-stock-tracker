@@ -87,6 +87,13 @@
             <button type="button" data-chart-range="1m">1 tháng</button>
             <button type="button" data-chart-range="3m">3 tháng</button>
           </div>
+          <div class="chart-window-controls" aria-label="Chọn khoảng hiển thị biểu đồ">
+            <span>Hiển thị</span>
+            <button type="button" data-chart-window="7d">7 ngày</button>
+            <button type="button" data-chart-window="15d">15 ngày</button>
+            <button type="button" data-chart-window="30d">30 ngày</button>
+            <button type="button" data-chart-window="60d" class="active">60 ngày</button>
+          </div>
           <canvas id="priceChart" width="960" height="420" aria-label="Biểu đồ giá kỹ thuật"></canvas>
           <div class="chart-legend">
             <span><i class="legend-price"></i>Giá</span>
@@ -134,6 +141,18 @@
             <article><span>14 ngày</span><strong id="change14">-</strong></article>
             <article><span>21 ngày</span><strong id="change21">-</strong></article>
             <article><span>30 ngày</span><strong id="change30">-</strong></article>
+          </div>
+        </section>
+
+        <section class="recommendation-section">
+          <div class="section-head">
+            <h2>Gợi ý theo thời hạn</h2>
+            <span>Dựa trên MA, RSI, MACD, volume và vùng giá</span>
+          </div>
+          <div id="recommendationBody" class="recommendation-grid">
+            <article><span>Ngắn hạn</span><strong>-</strong><p>Chưa có dữ liệu.</p></article>
+            <article><span>Trung hạn</span><strong>-</strong><p>Chưa có dữ liệu.</p></article>
+            <article><span>Dài hạn</span><strong>-</strong><p>Chưa có dữ liệu.</p></article>
           </div>
         </section>
 

@@ -22,6 +22,7 @@ const rsiCanvas = document.getElementById("rsiChart");
 const macdCanvas = document.getElementById("macdChart");
 const quickSymbols = document.querySelector(".quick-symbols");
 const chartControls = document.querySelector(".chart-controls");
+const chartWindowControls = document.querySelector(".chart-window-controls");
 const chartSection = document.querySelector(".chart-section");
 const chartWorkspace = document.getElementById("chartWorkspace");
 const fullscreenChartButton = document.getElementById("fullscreenChart");
@@ -78,6 +79,7 @@ const fields = {
   historyBody: document.getElementById("historyBody"),
   scoreTotalBadge: document.getElementById("scoreTotalBadge"),
   scoreAnalysis: document.getElementById("scoreAnalysis"),
+  recommendationBody: document.getElementById("recommendationBody"),
   rawData: document.getElementById("rawData")
 };
 
@@ -94,11 +96,19 @@ const CHART_PRESETS = {
   "3m": { label: "3 tháng", sourceRange: "2y", bucket: "3m" }
 };
 
+const CHART_WINDOWS = {
+  "7d": { label: "7 ngày", days: 7 },
+  "15d": { label: "15 ngày", days: 15 },
+  "30d": { label: "30 ngày", days: 30 },
+  "60d": { label: "60 ngày", days: 60 }
+};
+
 let latestPayload = null;
 let currentSymbol = "";
 let currentDailyBars = [];
 let currentChartSourceBars = [];
 let activeChartRange = "1d";
+let activeChartWindow = "60d";
 let chartRequestId = 0;
 
 function setMessage(text) {
@@ -219,6 +229,33 @@ function formatLargeNumber(value) {
 
 function formatOptional(value, digits = 2) {
   return toNumber(value) === null ? "-" : formatNumber(value, digits);
+}
+
+function technicalPriceDivisor(bars) {
+  const closes = bars
+    .map((bar) => toNumber(bar.close))
+    .filter((value) => value !== null)
+    .sort((a, b) => a - b);
+  if (!closes.length) return 1;
+  const median = closes[Math.floor(closes.length / 2)];
+  return median >= 1000 ? 1000 : 1;
+}
+
+function normalizeTechnicalBars(bars) {
+  const divisor = technicalPriceDivisor(bars);
+  if (divisor === 1) return bars;
+  const normalize = (value) => {
+    const number = toNumber(value);
+    return number === null ? null : number / divisor;
+  };
+
+  return bars.map((bar) => ({
+    ...bar,
+    open: normalize(bar.open),
+    high: normalize(bar.high),
+    low: normalize(bar.low),
+    close: normalize(bar.close)
+  }));
 }
 
 async function requestJson(path) {
@@ -422,7 +459,7 @@ function syncCanvasSize(canvas) {
   return { width, height };
 }
 
-function drawChart(points) {
+function drawChart(points, movingAverages = null) {
   const canvas = chartCanvas;
   const { width, height } = syncCanvasSize(canvas);
   const context = canvas.getContext("2d");
@@ -500,12 +537,12 @@ function drawChart(points) {
     context.globalAlpha = 1;
   });
 
-  const movingAverages = calculateMovingAverages(points);
+  const chartMovingAverages = movingAverages || calculateMovingAverages(points);
   [
-    { values: movingAverages.ma10, color: CHART_COLORS.ma10 },
-    { values: movingAverages.ma50, color: CHART_COLORS.ma50 },
-    { values: movingAverages.ma100, color: CHART_COLORS.ma100 },
-    { values: movingAverages.ma200, color: CHART_COLORS.ma200 }
+    { values: chartMovingAverages.ma10, color: CHART_COLORS.ma10 },
+    { values: chartMovingAverages.ma50, color: CHART_COLORS.ma50 },
+    { values: chartMovingAverages.ma100, color: CHART_COLORS.ma100 },
+    { values: chartMovingAverages.ma200, color: CHART_COLORS.ma200 }
   ].forEach((series) => {
     context.beginPath();
     let started = false;
@@ -758,17 +795,18 @@ function drawMacdCanvas(canvas, macdData) {
   });
 }
 
-function renderIndicators(bars) {
-  const rsi = calculateRsi(bars);
-  const macd = calculateMacd(bars);
+function renderIndicators(bars, indicators = null) {
+  const rsi = indicators?.rsi || calculateRsi(bars);
+  const macd = indicators?.macd || calculateMacd(bars);
   const latestRsi = [...rsi].reverse().find((value) => value !== null);
   const latestMacd = [...macd.macd].reverse().find((value) => value !== null);
   const latestSignal = [...macd.signal].reverse().find((value) => value !== null);
+  const latestHistogram = [...macd.histogram].reverse().find((value) => value !== null);
 
   fields.rsiValue.textContent = latestRsi === undefined ? "-" : formatNumber(latestRsi, 2);
   fields.macdValue.textContent = latestMacd === undefined
     ? "-"
-    : `${formatNumber(latestMacd, 2)} / Signal ${formatOptional(latestSignal, 2)}`;
+    : `${formatNumber(latestMacd, 2)} / Signal ${formatOptional(latestSignal, 2)} / Hist ${formatOptional(latestHistogram, 2)}`;
 
   drawLineCanvas(rsiCanvas, rsi, {
     min: 0,
@@ -815,7 +853,7 @@ function renderHistory(bars) {
       const changePercent = previousClose ? ((bar.close - previousClose) / previousClose) * 100 : null;
       return { ...bar, changePercent };
     })
-    .slice(-60)
+    .slice(-30)
     .reverse();
 
   fields.historyCount.textContent = `${rows.length} phiên gần nhất`;
@@ -857,8 +895,8 @@ function updatePriceColor(price, reference, target) {
   if (current === ref) target.classList.add("neutral");
 }
 
-function renderMovingAverages(bars) {
-  const movingAverages = calculateMovingAverages(bars);
+function renderMovingAverages(bars, movingAverages = null) {
+  const maValues = movingAverages || calculateMovingAverages(bars);
   const latestValue = (series) => [...series].reverse().find((value) => value !== null);
   const currentPrice = bars[bars.length - 1]?.close;
   const renderMa = (target, value) => {
@@ -870,17 +908,23 @@ function renderMovingAverages(bars) {
     if (currentPrice === value) target.classList.add("neutral");
   };
 
-  renderMa(fields.ma10, latestValue(movingAverages.ma10));
-  renderMa(fields.ma50, latestValue(movingAverages.ma50));
-  renderMa(fields.ma100, latestValue(movingAverages.ma100));
-  renderMa(fields.ma200, latestValue(movingAverages.ma200));
+  renderMa(fields.ma10, latestValue(maValues.ma10));
+  renderMa(fields.ma50, latestValue(maValues.ma50));
+  renderMa(fields.ma100, latestValue(maValues.ma100));
+  renderMa(fields.ma200, latestValue(maValues.ma200));
 
-  return movingAverages;
+  return maValues;
 }
 
 function setActiveChartButton(rangeKey) {
   chartControls?.querySelectorAll("button[data-chart-range]").forEach((button) => {
     button.classList.toggle("active", button.dataset.chartRange === rangeKey);
+  });
+}
+
+function setActiveChartWindowButton(windowKey) {
+  chartWindowControls?.querySelectorAll("button[data-chart-window]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.chartWindow === windowKey);
   });
 }
 
@@ -966,19 +1010,42 @@ function aggregateBarsForPreset(bars, preset) {
   return [...buckets.values()].sort((a, b) => a.timestamp - b.timestamp).slice(-260);
 }
 
+function filterChartWindow(bars, windowKey) {
+  const window = CHART_WINDOWS[windowKey] || CHART_WINDOWS["60d"];
+  if (!bars.length) return [];
+  const latestTimestamp = toNumber(bars[bars.length - 1]?.timestamp);
+  if (latestTimestamp === null) return bars.slice(-60);
+  const cutoff = latestTimestamp - window.days * 86400 * 1000;
+  const filtered = bars.filter((bar) => toNumber(bar.timestamp) === null || bar.timestamp >= cutoff);
+  return filtered.length ? filtered : bars.slice(-1);
+}
+
 function renderSelectedChart(bars, rangeKey = activeChartRange) {
   const preset = CHART_PRESETS[rangeKey] || CHART_PRESETS["1d"];
   currentChartSourceBars = bars;
-  const timeframeBars = aggregateBarsForPreset(bars, preset);
-  const displayBars = timeframeBars.map((bar) => ({
+  const timeframeBars = normalizeTechnicalBars(aggregateBarsForPreset(bars, preset));
+  const fullMovingAverages = calculateMovingAverages(timeframeBars);
+  const fullIndicators = {
+    rsi: calculateRsi(timeframeBars),
+    macd: calculateMacd(timeframeBars)
+  };
+  const windowBars = filterChartWindow(timeframeBars, activeChartWindow);
+  const firstDisplayIndex = Math.max(0, timeframeBars.length - windowBars.length);
+  const displayMovingAverages = {
+    ma10: fullMovingAverages.ma10.slice(firstDisplayIndex),
+    ma50: fullMovingAverages.ma50.slice(firstDisplayIndex),
+    ma100: fullMovingAverages.ma100.slice(firstDisplayIndex),
+    ma200: fullMovingAverages.ma200.slice(firstDisplayIndex)
+  };
+  const displayBars = windowBars.map((bar) => ({
     ...bar,
     time: formatChartPointTime(bar, preset)
   }));
 
-  drawChart(displayBars);
-  const movingAverages = renderMovingAverages(displayBars);
-  const indicators = renderIndicators(displayBars);
-  fields.chartRange.textContent = `${preset.label} - ${displayBars.length} nến`;
+  drawChart(displayBars, displayMovingAverages);
+  renderMovingAverages(timeframeBars, fullMovingAverages);
+  renderIndicators(timeframeBars, fullIndicators);
+  fields.chartRange.textContent = `${preset.label} - hiển thị ${CHART_WINDOWS[activeChartWindow]?.label || "60 ngày"}`;
 
   if (latestPayload) {
     latestPayload.activeTimeframe = preset.label;
@@ -995,7 +1062,7 @@ function renderSelectedChart(bars, rangeKey = activeChartRange) {
     fields.rawData.textContent = JSON.stringify(latestPayload, null, 2);
   }
 
-  return { bars: displayBars, movingAverages, indicators };
+  return { bars: displayBars, movingAverages: fullMovingAverages, indicators: fullIndicators };
 }
 
 async function applyChartRange(rangeKey) {
@@ -1301,6 +1368,120 @@ function renderScoreAnalysis(symbol, quote, overview, bars, movingAverages, indi
   return score;
 }
 
+function recommendationLabel(score) {
+  if (score >= 4) return { text: "Ưu tiên mua", className: "positive" };
+  if (score >= 2) return { text: "Mua thăm dò", className: "positive" };
+  if (score >= 0) return { text: "Theo dõi", className: "neutral" };
+  if (score >= -2) return { text: "Giảm tỷ trọng", className: "negative" };
+  return { text: "Tránh mua", className: "negative" };
+}
+
+function buildRecommendation(title, bars, options) {
+  const latestBar = bars[bars.length - 1] || {};
+  const currentPrice = latestBar.close;
+  const movingAverages = calculateMovingAverages(bars);
+  const rsi = calculateRsi(bars);
+  const macd = calculateMacd(bars);
+  const maFast = latestNonNull(movingAverages[options.fastMa]);
+  const maSlow = latestNonNull(movingAverages[options.slowMa]);
+  const latestRsi = latestNonNull(rsi);
+  const latestMacd = latestNonNull(macd.macd);
+  const latestSignal = latestNonNull(macd.signal);
+  const latestHistogram = latestNonNull(macd.histogram);
+  const volumes = bars.map((bar) => bar.volume);
+  const latestVolume = latestBar.volume;
+  const avgVolume20 = average(volumes.slice(-20));
+  const levels = findSupportResistance(bars, currentPrice);
+
+  let score = 0;
+  const reasons = [];
+
+  if (currentPrice > maFast) {
+    score += 1;
+    reasons.push(`giá trên ${options.fastLabel}`);
+  } else {
+    score -= 1;
+    reasons.push(`giá dưới ${options.fastLabel}`);
+  }
+
+  if (maFast > maSlow) {
+    score += 1;
+    reasons.push(`${options.fastLabel} trên ${options.slowLabel}`);
+  } else {
+    score -= 1;
+    reasons.push(`${options.fastLabel} dưới ${options.slowLabel}`);
+  }
+
+  if (latestMacd > latestSignal && latestHistogram > 0) {
+    score += 1;
+    reasons.push("MACD ủng hộ tăng");
+  } else if (latestMacd < latestSignal && latestHistogram < 0) {
+    score -= 1;
+    reasons.push("MACD còn yếu");
+  }
+
+  if (latestRsi >= 45 && latestRsi <= 65) {
+    score += 1;
+    reasons.push(`RSI ${formatOptional(latestRsi, 1)} khỏe`);
+  } else if (latestRsi > 75 || latestRsi < 35) {
+    score -= 1;
+    reasons.push(`RSI ${formatOptional(latestRsi, 1)} rủi ro`);
+  } else {
+    reasons.push(`RSI ${formatOptional(latestRsi, 1)} trung tính`);
+  }
+
+  if (latestVolume && avgVolume20 && latestVolume > avgVolume20) {
+    score += 1;
+    reasons.push("volume trên TB20");
+  }
+
+  const distanceToSupport = levels.support1 ? ((currentPrice - levels.support1) / currentPrice) * 100 : null;
+  if (distanceToSupport !== null && distanceToSupport <= 4) {
+    score += 1;
+    reasons.push("gần hỗ trợ");
+  }
+
+  const label = recommendationLabel(score);
+  return {
+    title,
+    label,
+    detail: `${reasons.slice(0, 4).join(", ")}. Hỗ trợ gần ${formatPrice(levels.support1)}, kháng cự gần ${formatPrice(levels.resistance1)}.`
+  };
+}
+
+function renderTradingRecommendations(bars) {
+  if (!bars.length) return;
+  const normalizedBars = normalizeTechnicalBars(bars);
+  const recommendations = [
+    buildRecommendation("Ngắn hạn", normalizedBars.slice(-80), {
+      fastMa: "ma10",
+      slowMa: "ma50",
+      fastLabel: "MA20",
+      slowLabel: "MA50"
+    }),
+    buildRecommendation("Trung hạn", normalizedBars.slice(-180), {
+      fastMa: "ma50",
+      slowMa: "ma100",
+      fastLabel: "MA50",
+      slowLabel: "MA100"
+    }),
+    buildRecommendation("Dài hạn", normalizedBars, {
+      fastMa: "ma100",
+      slowMa: "ma200",
+      fastLabel: "MA100",
+      slowLabel: "MA200"
+    })
+  ];
+
+  fields.recommendationBody.innerHTML = recommendations.map((item) => `
+    <article>
+      <span>${escapeHtml(item.title)}</span>
+      <strong class="${item.label.className}">${escapeHtml(item.label.text)}</strong>
+      <p>${escapeHtml(item.detail)}</p>
+    </article>
+  `).join("");
+}
+
 function fillData(symbol, quote, overview, bars) {
   const latestBar = bars[bars.length - 1] || {};
   const previousBar = bars[bars.length - 2] || {};
@@ -1346,7 +1527,9 @@ function fillData(symbol, quote, overview, bars) {
   currentSymbol = symbol;
   currentDailyBars = bars;
   activeChartRange = "1d";
+  activeChartWindow = "60d";
   setActiveChartButton(activeChartRange);
+  setActiveChartWindowButton(activeChartWindow);
   renderSelectedChart(bars, activeChartRange);
   const movingAverages = calculateMovingAverages(bars);
   const indicators = {
@@ -1354,6 +1537,7 @@ function fillData(symbol, quote, overview, bars) {
     macd: calculateMacd(bars)
   };
   renderPriceChanges(bars);
+  renderTradingRecommendations(bars);
   renderInvestorFlow(quote);
   renderHistory(bars);
   const score = renderScoreAnalysis(symbol, quote, overview, bars, movingAverages, indicators);
@@ -1452,6 +1636,14 @@ chartControls?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-chart-range]");
   if (!button) return;
   applyChartRange(button.dataset.chartRange);
+});
+
+chartWindowControls?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-chart-window]");
+  if (!button || !currentChartSourceBars.length) return;
+  activeChartWindow = button.dataset.chartWindow;
+  setActiveChartWindowButton(activeChartWindow);
+  renderSelectedChart(currentChartSourceBars, activeChartRange);
 });
 
 fullscreenChartButton?.addEventListener("click", async () => {

@@ -102,6 +102,10 @@ h1 {
 .quote-card,
 .metrics-grid,
 .chart-section,
+.change-section,
+.recommendation-section,
+.flow-section,
+.history-section,
 .details-grid,
 .raw-section {
   margin: 18px 24px;
@@ -305,6 +309,7 @@ button:hover {
 
 .chart-section,
 .change-section,
+.recommendation-section,
 .flow-section,
 .history-section,
 .raw-section {
@@ -341,6 +346,38 @@ button:hover {
 
 .change-grid strong {
   font-size: 22px;
+}
+
+.recommendation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.recommendation-grid article {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  background: #ffffff;
+}
+
+.recommendation-grid span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+
+.recommendation-grid strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 20px;
+}
+
+.recommendation-grid p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .indicator-card {
@@ -390,6 +427,20 @@ button:hover {
   margin: 0 0 14px;
 }
 
+.chart-window-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 0 14px;
+}
+
+.chart-window-controls span {
+  color: var(--muted);
+  font-size: var(--font-small);
+  font-weight: 700;
+}
+
 .chart-controls button {
   min-height: 34px;
   border-color: var(--border);
@@ -402,6 +453,21 @@ button:hover {
 .chart-controls button.active {
   border-color: var(--primary);
   background: var(--primary);
+  color: #ffffff;
+}
+
+.chart-window-controls button {
+  min-height: 30px;
+  border-color: var(--border);
+  padding: 0 10px;
+  background: #ffffff;
+  color: var(--primary);
+  font-size: 13px;
+}
+
+.chart-window-controls button.active {
+  border-color: var(--orange);
+  background: var(--orange);
   color: #ffffff;
 }
 
@@ -750,6 +816,10 @@ pre {
   .change-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .recommendation-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 520px) {
@@ -763,6 +833,7 @@ pre {
     .chart-section,
     .indicator-grid,
     .change-section,
+    .recommendation-section,
     .flow-section,
   .history-section,
   .details-grid,
@@ -794,6 +865,10 @@ pre {
   }
 
   .change-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .recommendation-grid {
     grid-template-columns: 1fr;
   }
 
