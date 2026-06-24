@@ -83,12 +83,12 @@ const CHART_PRESETS = {
   "1h": { label: "1h", sourceRange: "1h", intervalMs: 60 * 60 * 1000, intraday: true },
   "2h": { label: "2h", sourceRange: "2h", intervalMs: 2 * 60 * 60 * 1000, intraday: true },
   "4h": { label: "4h", sourceRange: "4h", intervalMs: 4 * 60 * 60 * 1000, intraday: true },
-  "1d": { label: "1 ngày", sourceRange: "2y", intervalMs: 24 * 60 * 60 * 1000 },
-  "3d": { label: "3 ngày", sourceRange: "2y", intervalMs: 3 * 24 * 60 * 60 * 1000 },
-  "5d": { label: "5 ngày", sourceRange: "2y", intervalMs: 5 * 24 * 60 * 60 * 1000 },
-  "1w": { label: "1 tuần", sourceRange: "2y", intervalMs: 7 * 24 * 60 * 60 * 1000 },
-  "1m": { label: "1 tháng", sourceRange: "2y", intervalMs: 31 * 24 * 60 * 60 * 1000 },
-  "3m": { label: "3 tháng", sourceRange: "2y", intervalMs: 93 * 24 * 60 * 60 * 1000 }
+  "1d": { label: "1 ngày", sourceRange: "2y", bucket: "1d" },
+  "3d": { label: "3 ngày", sourceRange: "2y", bucket: "3d" },
+  "5d": { label: "5 ngày", sourceRange: "2y", bucket: "5d" },
+  "1w": { label: "1 tuần", sourceRange: "2y", bucket: "1w" },
+  "1m": { label: "1 tháng", sourceRange: "2y", bucket: "1m" },
+  "3m": { label: "3 tháng", sourceRange: "2y", bucket: "3m" }
 };
 
 let latestPayload = null;
@@ -422,31 +422,69 @@ function drawChart(points) {
   }
 
   const padding = 44;
-  const closes = points.map((point) => point.close);
-  const min = Math.min(...closes);
-  const max = Math.max(...closes);
+  const volumeHeight = 74;
+  const gap = 16;
+  const plotTop = padding;
+  const plotBottom = height - padding - volumeHeight - gap;
+  const volumeTop = plotBottom + gap;
+  const plotHeight = plotBottom - plotTop;
+  const priceValues = points.flatMap((point) => [
+    toNumber(point.high) ?? toNumber(point.close),
+    toNumber(point.low) ?? toNumber(point.close),
+    toNumber(point.open),
+    toNumber(point.close)
+  ]).filter((value) => value !== null);
+  const min = Math.min(...priceValues);
+  const max = Math.max(...priceValues);
   const span = max - min || 1;
+  const xStep = (width - padding * 2) / Math.max(points.length - 1, 1);
+  const candleWidth = Math.max(3, Math.min(14, xStep * 0.58));
+  const maxVolume = Math.max(...points.map((point) => toNumber(point.volume) || 0), 1);
+  const xFor = (index) => padding + xStep * index;
+  const yFor = (value) => plotBottom - ((value - min) / span) * plotHeight;
 
   context.strokeStyle = CHART_COLORS.grid;
   context.lineWidth = 1;
   for (let index = 0; index < 5; index += 1) {
-    const y = padding + ((height - padding * 2) / 4) * index;
+    const y = plotTop + (plotHeight / 4) * index;
     context.beginPath();
     context.moveTo(padding, y);
     context.lineTo(width - padding, y);
     context.stroke();
   }
 
-  context.beginPath();
   points.forEach((point, index) => {
-    const x = padding + ((width - padding * 2) / Math.max(points.length - 1, 1)) * index;
-    const y = height - padding - ((point.close - min) / span) * (height - padding * 2);
-    if (index === 0) context.moveTo(x, y);
-    else context.lineTo(x, y);
+    const open = toNumber(point.open) ?? point.close;
+    const close = toNumber(point.close);
+    const high = toNumber(point.high) ?? Math.max(open, close);
+    const low = toNumber(point.low) ?? Math.min(open, close);
+    if (close === null || open === null) return;
+
+    const x = xFor(index);
+    const color = close >= open ? CHART_COLORS.positive : CHART_COLORS.negative;
+    const openY = yFor(open);
+    const closeY = yFor(close);
+    const highY = yFor(high);
+    const lowY = yFor(low);
+    const bodyTop = Math.min(openY, closeY);
+    const bodyHeight = Math.max(Math.abs(closeY - openY), 2);
+    const volume = toNumber(point.volume) || 0;
+    const volumeBarHeight = (volume / maxVolume) * volumeHeight;
+
+    context.strokeStyle = color;
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(x, highY);
+    context.lineTo(x, lowY);
+    context.stroke();
+
+    context.fillStyle = color;
+    context.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+
+    context.globalAlpha = 0.42;
+    context.fillRect(x - candleWidth / 2, height - padding - volumeBarHeight, candleWidth, volumeBarHeight);
+    context.globalAlpha = 1;
   });
-  context.strokeStyle = CHART_COLORS.price;
-  context.lineWidth = 3;
-  context.stroke();
 
   const movingAverages = calculateMovingAverages(points);
   [
@@ -459,8 +497,8 @@ function drawChart(points) {
     let started = false;
     series.values.forEach((value, index) => {
       if (value === null) return;
-      const x = padding + ((width - padding * 2) / Math.max(points.length - 1, 1)) * index;
-      const y = height - padding - ((value - min) / span) * (height - padding * 2);
+      const x = xFor(index);
+      const y = yFor(value);
       if (!started) {
         context.moveTo(x, y);
         started = true;
@@ -476,9 +514,10 @@ function drawChart(points) {
   context.fillStyle = CHART_COLORS.text;
   context.font = "13px Arial";
   context.fillText(formatPrice(max), 8, padding + 4);
-  context.fillText(formatPrice(min), 8, height - padding + 4);
+  context.fillText(formatPrice(min), 8, plotBottom + 4);
+  context.fillText("Vol", 8, volumeTop + 14);
   context.fillText(safeText(points[0].time), padding, height - 12);
-  context.fillText(safeText(points[points.length - 1].time), width - padding - 90, height - 12);
+  context.fillText(safeText(points[points.length - 1].time), width - padding - 110, height - 12);
 }
 
 function calculateRsi(points, period = 14) {
@@ -843,6 +882,45 @@ function formatChartPointTime(bar, preset) {
   return date.toLocaleDateString("vi-VN");
 }
 
+function startOfLocalDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+function getCalendarBucket(timestamp, preset) {
+  const date = new Date(timestamp);
+
+  if (preset.intervalMs) {
+    return Math.floor(timestamp / preset.intervalMs) * preset.intervalMs;
+  }
+
+  if (preset.bucket === "1d") {
+    return startOfLocalDay(date);
+  }
+
+  if (preset.bucket === "3d" || preset.bucket === "5d") {
+    const size = preset.bucket === "3d" ? 3 : 5;
+    const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const yearStart = new Date(date.getFullYear(), 0, 1);
+    const dayIndex = Math.floor((dayStart - yearStart) / 86400000);
+    return new Date(date.getFullYear(), 0, 1 + Math.floor(dayIndex / size) * size).getTime();
+  }
+
+  if (preset.bucket === "1w") {
+    const day = date.getDay() || 7;
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate() - day + 1).getTime();
+  }
+
+  if (preset.bucket === "1m") {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getTime();
+  }
+
+  if (preset.bucket === "3m") {
+    return new Date(date.getFullYear(), Math.floor(date.getMonth() / 3) * 3, 1).getTime();
+  }
+
+  return startOfLocalDay(date);
+}
+
 function aggregateBarsForPreset(bars, preset) {
   if (!bars.length) return [];
   const buckets = new Map();
@@ -852,7 +930,7 @@ function aggregateBarsForPreset(bars, preset) {
     const close = toNumber(bar.close);
     if (timestamp === null || close === null) return;
 
-    const bucket = Math.floor(timestamp / preset.intervalMs) * preset.intervalMs;
+    const bucket = getCalendarBucket(timestamp, preset);
     const current = buckets.get(bucket);
     if (!current) {
       buckets.set(bucket, {
