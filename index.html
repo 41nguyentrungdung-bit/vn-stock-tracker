@@ -87,13 +87,6 @@
             <button type="button" data-chart-range="1m">1 tháng</button>
             <button type="button" data-chart-range="3m">3 tháng</button>
           </div>
-          <div class="chart-window-controls" aria-label="Chọn khoảng hiển thị biểu đồ">
-            <span>Hiển thị</span>
-            <button type="button" data-chart-window="7d">7 ngày</button>
-            <button type="button" data-chart-window="15d">15 ngày</button>
-            <button type="button" data-chart-window="30d">30 ngày</button>
-            <button type="button" data-chart-window="60d" class="active">60 ngày</button>
-          </div>
           <canvas id="priceChart" width="960" height="420" aria-label="Biểu đồ giá kỹ thuật"></canvas>
           <div class="chart-legend">
             <span><i class="legend-price"></i>Giá</span>
@@ -176,6 +169,13 @@
           <div class="section-head">
             <h2>Lịch sử giá</h2>
             <span id="historyCount">-</span>
+          </div>
+          <div class="history-controls" aria-label="Chọn số ngày lịch sử giá">
+            <span>Hiển thị</span>
+            <button type="button" data-history-limit="7">7 ngày</button>
+            <button type="button" data-history-limit="15">15 ngày</button>
+            <button type="button" data-history-limit="30" class="active">30 ngày</button>
+            <button type="button" data-history-limit="60">60 ngày</button>
           </div>
           <div class="table-wrap">
             <table>

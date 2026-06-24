@@ -22,7 +22,7 @@ const rsiCanvas = document.getElementById("rsiChart");
 const macdCanvas = document.getElementById("macdChart");
 const quickSymbols = document.querySelector(".quick-symbols");
 const chartControls = document.querySelector(".chart-controls");
-const chartWindowControls = document.querySelector(".chart-window-controls");
+const historyControls = document.querySelector(".history-controls");
 const chartSection = document.querySelector(".chart-section");
 const chartWorkspace = document.getElementById("chartWorkspace");
 const fullscreenChartButton = document.getElementById("fullscreenChart");
@@ -96,11 +96,11 @@ const CHART_PRESETS = {
   "3m": { label: "3 tháng", sourceRange: "2y", bucket: "3m" }
 };
 
-const CHART_WINDOWS = {
-  "7d": { label: "7 ngày", days: 7 },
-  "15d": { label: "15 ngày", days: 15 },
-  "30d": { label: "30 ngày", days: 30 },
-  "60d": { label: "60 ngày", days: 60 }
+const HISTORY_LIMITS = {
+  "7": { label: "7 ngày", rows: 7 },
+  "15": { label: "15 ngày", rows: 15 },
+  "30": { label: "30 ngày", rows: 30 },
+  "60": { label: "60 ngày", rows: 60 }
 };
 
 let latestPayload = null;
@@ -108,7 +108,7 @@ let currentSymbol = "";
 let currentDailyBars = [];
 let currentChartSourceBars = [];
 let activeChartRange = "1d";
-let activeChartWindow = "60d";
+let activeHistoryLimit = 30;
 let chartRequestId = 0;
 
 function setMessage(text) {
@@ -846,17 +846,18 @@ function renderInvestorFlow(quote) {
   fields.flowStatus.textContent = foreignBuy !== null ? "Dữ liệu từ Vietcap/VCI" : "Chưa có dữ liệu";
 }
 
-function renderHistory(bars) {
+function renderHistory(bars, limit = activeHistoryLimit) {
   const rows = bars
     .map((bar, index) => {
       const previousClose = index > 0 ? bars[index - 1].close : null;
       const changePercent = previousClose ? ((bar.close - previousClose) / previousClose) * 100 : null;
       return { ...bar, changePercent };
     })
-    .slice(-30)
+    .slice(-limit)
     .reverse();
 
-  fields.historyCount.textContent = `${rows.length} phiên gần nhất`;
+  const limitInfo = HISTORY_LIMITS[String(limit)] || { label: `${limit} ngày` };
+  fields.historyCount.textContent = `${rows.length} phiên gần nhất (${limitInfo.label})`;
   fields.historyBody.innerHTML = rows.map((row) => `
     <tr>
       <td>${safeText(row.time)}</td>
@@ -922,9 +923,9 @@ function setActiveChartButton(rangeKey) {
   });
 }
 
-function setActiveChartWindowButton(windowKey) {
-  chartWindowControls?.querySelectorAll("button[data-chart-window]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.chartWindow === windowKey);
+function setActiveHistoryButton(limit) {
+  historyControls?.querySelectorAll("button[data-history-limit]").forEach((button) => {
+    button.classList.toggle("active", Number(button.dataset.historyLimit) === Number(limit));
   });
 }
 
@@ -1010,16 +1011,6 @@ function aggregateBarsForPreset(bars, preset) {
   return [...buckets.values()].sort((a, b) => a.timestamp - b.timestamp).slice(-260);
 }
 
-function filterChartWindow(bars, windowKey) {
-  const window = CHART_WINDOWS[windowKey] || CHART_WINDOWS["60d"];
-  if (!bars.length) return [];
-  const latestTimestamp = toNumber(bars[bars.length - 1]?.timestamp);
-  if (latestTimestamp === null) return bars.slice(-60);
-  const cutoff = latestTimestamp - window.days * 86400 * 1000;
-  const filtered = bars.filter((bar) => toNumber(bar.timestamp) === null || bar.timestamp >= cutoff);
-  return filtered.length ? filtered : bars.slice(-1);
-}
-
 function renderSelectedChart(bars, rangeKey = activeChartRange) {
   const preset = CHART_PRESETS[rangeKey] || CHART_PRESETS["1d"];
   currentChartSourceBars = bars;
@@ -1029,23 +1020,15 @@ function renderSelectedChart(bars, rangeKey = activeChartRange) {
     rsi: calculateRsi(timeframeBars),
     macd: calculateMacd(timeframeBars)
   };
-  const windowBars = filterChartWindow(timeframeBars, activeChartWindow);
-  const firstDisplayIndex = Math.max(0, timeframeBars.length - windowBars.length);
-  const displayMovingAverages = {
-    ma10: fullMovingAverages.ma10.slice(firstDisplayIndex),
-    ma50: fullMovingAverages.ma50.slice(firstDisplayIndex),
-    ma100: fullMovingAverages.ma100.slice(firstDisplayIndex),
-    ma200: fullMovingAverages.ma200.slice(firstDisplayIndex)
-  };
-  const displayBars = windowBars.map((bar) => ({
+  const displayBars = timeframeBars.map((bar) => ({
     ...bar,
     time: formatChartPointTime(bar, preset)
   }));
 
-  drawChart(displayBars, displayMovingAverages);
+  drawChart(displayBars, fullMovingAverages);
   renderMovingAverages(timeframeBars, fullMovingAverages);
   renderIndicators(timeframeBars, fullIndicators);
-  fields.chartRange.textContent = `${preset.label} - hiển thị ${CHART_WINDOWS[activeChartWindow]?.label || "60 ngày"}`;
+  fields.chartRange.textContent = `${preset.label} - ${displayBars.length} nến`;
 
   if (latestPayload) {
     latestPayload.activeTimeframe = preset.label;
@@ -1527,9 +1510,9 @@ function fillData(symbol, quote, overview, bars) {
   currentSymbol = symbol;
   currentDailyBars = bars;
   activeChartRange = "1d";
-  activeChartWindow = "60d";
+  activeHistoryLimit = 30;
   setActiveChartButton(activeChartRange);
-  setActiveChartWindowButton(activeChartWindow);
+  setActiveHistoryButton(activeHistoryLimit);
   renderSelectedChart(bars, activeChartRange);
   const movingAverages = calculateMovingAverages(bars);
   const indicators = {
@@ -1539,7 +1522,7 @@ function fillData(symbol, quote, overview, bars) {
   renderPriceChanges(bars);
   renderTradingRecommendations(bars);
   renderInvestorFlow(quote);
-  renderHistory(bars);
+  renderHistory(bars, activeHistoryLimit);
   const score = renderScoreAnalysis(symbol, quote, overview, bars, movingAverages, indicators);
   return { movingAverages, indicators, score };
 }
@@ -1638,12 +1621,12 @@ chartControls?.addEventListener("click", (event) => {
   applyChartRange(button.dataset.chartRange);
 });
 
-chartWindowControls?.addEventListener("click", (event) => {
-  const button = event.target.closest("button[data-chart-window]");
-  if (!button || !currentChartSourceBars.length) return;
-  activeChartWindow = button.dataset.chartWindow;
-  setActiveChartWindowButton(activeChartWindow);
-  renderSelectedChart(currentChartSourceBars, activeChartRange);
+historyControls?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-history-limit]");
+  if (!button || !currentDailyBars.length) return;
+  activeHistoryLimit = Number(button.dataset.historyLimit) || 30;
+  setActiveHistoryButton(activeHistoryLimit);
+  renderHistory(currentDailyBars, activeHistoryLimit);
 });
 
 fullscreenChartButton?.addEventListener("click", async () => {
