@@ -1,4 +1,4 @@
-const API_BASE = "https://query1.finance.yahoo.com";
+﻿const API_BASE = "https://query1.finance.yahoo.com";
 const PROXY_BASE = "/.netlify/functions/vn-stock";
 const CHART_COLORS = {
   text: "#6f5a6d",
@@ -79,22 +79,22 @@ const fields = {
 };
 
 const CHART_PRESETS = {
-  "30m": { label: "30p", sourceRange: "30m", mode: "tail", count: 30, intraday: true },
-  "1h": { label: "1h", sourceRange: "1h", mode: "tail", count: 60, intraday: true },
-  "2h": { label: "2h", sourceRange: "2h", mode: "tail", count: 120, intraday: true },
-  "4h": { label: "4h", sourceRange: "4h", mode: "tail", count: 240, intraday: true },
-  "1d": { label: "1 ngày", sourceRange: "1d", mode: "tradingDays", count: 1, intraday: true },
-  "3d": { label: "3 ngày", sourceRange: "3d", mode: "tradingDays", count: 3, intraday: true },
-  "5d": { label: "5 ngày", sourceRange: "5d", mode: "tradingDays", count: 5, intraday: true },
-  "1w": { label: "1 tuần", sourceRange: "1w", mode: "calendarDays", days: 7 },
-  "1m": { label: "1 tháng", sourceRange: "1m", mode: "calendarDays", days: 31 },
-  "3m": { label: "3 tháng", sourceRange: "3m", mode: "calendarDays", days: 93 }
+  "30m": { label: "30p", sourceRange: "30m", intervalMs: 30 * 60 * 1000, intraday: true },
+  "1h": { label: "1h", sourceRange: "1h", intervalMs: 60 * 60 * 1000, intraday: true },
+  "2h": { label: "2h", sourceRange: "2h", intervalMs: 2 * 60 * 60 * 1000, intraday: true },
+  "4h": { label: "4h", sourceRange: "4h", intervalMs: 4 * 60 * 60 * 1000, intraday: true },
+  "1d": { label: "1 ngày", sourceRange: "2y", intervalMs: 24 * 60 * 60 * 1000 },
+  "3d": { label: "3 ngày", sourceRange: "2y", intervalMs: 3 * 24 * 60 * 60 * 1000 },
+  "5d": { label: "5 ngày", sourceRange: "2y", intervalMs: 5 * 24 * 60 * 60 * 1000 },
+  "1w": { label: "1 tuần", sourceRange: "2y", intervalMs: 7 * 24 * 60 * 60 * 1000 },
+  "1m": { label: "1 tháng", sourceRange: "2y", intervalMs: 31 * 24 * 60 * 60 * 1000 },
+  "3m": { label: "3 tháng", sourceRange: "2y", intervalMs: 93 * 24 * 60 * 60 * 1000 }
 };
 
 let latestPayload = null;
 let currentSymbol = "";
 let currentDailyBars = [];
-let activeChartRange = "3m";
+let activeChartRange = "1d";
 let chartRequestId = 0;
 
 function setMessage(text) {
@@ -833,64 +833,78 @@ function setActiveChartButton(rangeKey) {
   });
 }
 
-function barDateKey(bar) {
-  const timestamp = toNumber(bar.timestamp);
-  if (timestamp === null) return safeText(bar.time);
-  return new Date(timestamp).toLocaleDateString("vi-VN");
-}
-
 function formatChartPointTime(bar, preset) {
   const timestamp = toNumber(bar.timestamp);
   if (timestamp === null) return safeText(bar.time);
   const date = new Date(timestamp);
-  if (preset.intraday && preset.mode === "tail") {
-    return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-  }
   if (preset.intraday) {
-    return `${date.toLocaleDateString("vi-VN")} ${date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`;
+    return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
   }
   return date.toLocaleDateString("vi-VN");
 }
 
-function filterBarsForPreset(bars, preset) {
+function aggregateBarsForPreset(bars, preset) {
   if (!bars.length) return [];
+  const buckets = new Map();
 
-  if (preset.mode === "tail") {
-    return bars.slice(-preset.count);
-  }
+  bars.forEach((bar) => {
+    const timestamp = toNumber(bar.timestamp);
+    const close = toNumber(bar.close);
+    if (timestamp === null || close === null) return;
 
-  if (preset.mode === "tradingDays") {
-    const dateKeys = [];
-    [...bars].reverse().forEach((bar) => {
-      const key = barDateKey(bar);
-      if (!dateKeys.includes(key)) dateKeys.push(key);
-    });
-    const allowed = new Set(dateKeys.slice(0, preset.count));
-    return bars.filter((bar) => allowed.has(barDateKey(bar)));
-  }
+    const bucket = Math.floor(timestamp / preset.intervalMs) * preset.intervalMs;
+    const current = buckets.get(bucket);
+    if (!current) {
+      buckets.set(bucket, {
+        timestamp: bucket,
+        time: bar.time,
+        open: toNumber(bar.open) ?? close,
+        high: toNumber(bar.high) ?? close,
+        low: toNumber(bar.low) ?? close,
+        close,
+        volume: toNumber(bar.volume) ?? 0
+      });
+      return;
+    }
 
-  if (preset.mode === "calendarDays") {
-    const latestTimestamp = toNumber(bars[bars.length - 1]?.timestamp);
-    if (latestTimestamp === null) return bars.slice(-preset.days);
-    const cutoff = latestTimestamp - preset.days * 86400 * 1000;
-    return bars.filter((bar) => toNumber(bar.timestamp) === null || bar.timestamp >= cutoff);
-  }
+    current.high = Math.max(current.high, toNumber(bar.high) ?? close);
+    current.low = Math.min(current.low, toNumber(bar.low) ?? close);
+    current.close = close;
+    current.volume += toNumber(bar.volume) ?? 0;
+  });
 
-  return bars;
+  return [...buckets.values()].sort((a, b) => a.timestamp - b.timestamp).slice(-260);
 }
 
 function renderSelectedChart(bars, rangeKey = activeChartRange) {
-  const preset = CHART_PRESETS[rangeKey] || CHART_PRESETS["3m"];
-  const filtered = filterBarsForPreset(bars, preset);
-  const displayBars = filtered.map((bar) => ({
+  const preset = CHART_PRESETS[rangeKey] || CHART_PRESETS["1d"];
+  const timeframeBars = aggregateBarsForPreset(bars, preset);
+  const displayBars = timeframeBars.map((bar) => ({
     ...bar,
     time: formatChartPointTime(bar, preset)
   }));
 
   drawChart(displayBars);
-  renderMovingAverages(displayBars);
-  fields.chartRange.textContent = `${preset.label} - ${displayBars.length} điểm dữ liệu`;
-  return displayBars;
+  const movingAverages = renderMovingAverages(displayBars);
+  const indicators = renderIndicators(displayBars);
+  fields.chartRange.textContent = `${preset.label} - ${displayBars.length} nến`;
+
+  if (latestPayload) {
+    latestPayload.activeTimeframe = preset.label;
+    latestPayload.indicators = {
+      rsi14: fields.rsiValue.textContent,
+      macd: fields.macdValue.textContent,
+      movingAverages: {
+        ma10: fields.ma10.textContent,
+        ma50: fields.ma50.textContent,
+        ma100: fields.ma100.textContent,
+        ma200: fields.ma200.textContent
+      }
+    };
+    fields.rawData.textContent = JSON.stringify(latestPayload, null, 2);
+  }
+
+  return { bars: displayBars, movingAverages, indicators };
 }
 
 async function applyChartRange(rangeKey) {
@@ -899,7 +913,7 @@ async function applyChartRange(rangeKey) {
     return;
   }
 
-  const preset = CHART_PRESETS[rangeKey] || CHART_PRESETS["3m"];
+  const preset = CHART_PRESETS[rangeKey] || CHART_PRESETS["1d"];
   activeChartRange = rangeKey;
   setActiveChartButton(rangeKey);
 
@@ -923,9 +937,9 @@ async function applyChartRange(rangeKey) {
     renderSelectedChart(parsed.bars, rangeKey);
     setMessage("");
   } catch (error) {
-    renderSelectedChart(currentDailyBars, "3m");
-    setActiveChartButton("3m");
-    activeChartRange = "3m";
+    renderSelectedChart(currentDailyBars, "1d");
+    setActiveChartButton("1d");
+    activeChartRange = "1d";
     setMessage(error.message || "Không tải được dữ liệu biểu đồ.");
   }
 }
@@ -1240,11 +1254,14 @@ function fillData(symbol, quote, overview, bars) {
 
   currentSymbol = symbol;
   currentDailyBars = bars;
-  activeChartRange = "3m";
+  activeChartRange = "1d";
   setActiveChartButton(activeChartRange);
   renderSelectedChart(bars, activeChartRange);
   const movingAverages = calculateMovingAverages(bars);
-  const indicators = renderIndicators(bars);
+  const indicators = {
+    rsi: calculateRsi(bars),
+    macd: calculateMacd(bars)
+  };
   renderPriceChanges(bars);
   renderInvestorFlow(quote);
   renderHistory(bars);
@@ -1290,6 +1307,7 @@ async function loadVietnamStock(symbol) {
     source: parsed.source,
     symbol,
     resolvedSymbol: quote.ticker,
+    activeTimeframe: CHART_PRESETS[activeChartRange]?.label || activeChartRange,
     quote,
     overview,
     recentBars: bars.slice(-30),
@@ -1375,3 +1393,4 @@ if ("serviceWorker" in navigator) {
     });
   });
 }
+

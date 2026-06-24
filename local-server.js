@@ -22,13 +22,13 @@ const ALLOWED_PREFIXES = [
 
 const VCI_RANGE_CONFIG = {
   "2y": { timeFrame: "ONE_DAY", lookbackDays: 730 },
-  "30m": { timeFrame: "ONE_MINUTE", lookbackDays: 10 },
-  "1h": { timeFrame: "ONE_MINUTE", lookbackDays: 10 },
-  "2h": { timeFrame: "ONE_MINUTE", lookbackDays: 10 },
-  "4h": { timeFrame: "ONE_MINUTE", lookbackDays: 10 },
-  "1d": { timeFrame: "ONE_MINUTE", lookbackDays: 10 },
-  "3d": { timeFrame: "ONE_HOUR", lookbackDays: 14 },
-  "5d": { timeFrame: "ONE_HOUR", lookbackDays: 21 },
+  "30m": { timeFrame: "ONE_MINUTE", lookbackDays: 120 },
+  "1h": { timeFrame: "ONE_HOUR", lookbackDays: 365 },
+  "2h": { timeFrame: "ONE_HOUR", lookbackDays: 500 },
+  "4h": { timeFrame: "ONE_HOUR", lookbackDays: 730 },
+  "1d": { timeFrame: "ONE_DAY", lookbackDays: 730 },
+  "3d": { timeFrame: "ONE_DAY", lookbackDays: 730 },
+  "5d": { timeFrame: "ONE_DAY", lookbackDays: 730 },
   "1w": { timeFrame: "ONE_DAY", lookbackDays: 30 },
   "1m": { timeFrame: "ONE_DAY", lookbackDays: 70 },
   "3m": { timeFrame: "ONE_DAY", lookbackDays: 160 }
