@@ -22,6 +22,9 @@ const rsiCanvas = document.getElementById("rsiChart");
 const macdCanvas = document.getElementById("macdChart");
 const quickSymbols = document.querySelector(".quick-symbols");
 const chartControls = document.querySelector(".chart-controls");
+const chartSection = document.querySelector(".chart-section");
+const chartWorkspace = document.getElementById("chartWorkspace");
+const fullscreenChartButton = document.getElementById("fullscreenChart");
 const tabs = document.querySelectorAll(".tab");
 const tabPanels = {
   overview: document.getElementById("overviewPanel"),
@@ -94,6 +97,7 @@ const CHART_PRESETS = {
 let latestPayload = null;
 let currentSymbol = "";
 let currentDailyBars = [];
+let currentChartSourceBars = [];
 let activeChartRange = "1d";
 let chartRequestId = 0;
 
@@ -407,11 +411,21 @@ function parseVciData(rawData) {
   };
 }
 
+function syncCanvasSize(canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const width = Math.max(320, Math.round(rect.width || canvas.width));
+  const height = Math.max(180, Math.round(rect.height || canvas.height));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  return { width, height };
+}
+
 function drawChart(points) {
   const canvas = chartCanvas;
+  const { width, height } = syncCanvasSize(canvas);
   const context = canvas.getContext("2d");
-  const width = canvas.width;
-  const height = canvas.height;
   context.clearRect(0, 0, width, height);
 
   if (!points.length) {
@@ -569,7 +583,7 @@ function calculateSma(points, period) {
 
 function calculateMovingAverages(points) {
   return {
-    ma10: calculateSma(points, 10),
+    ma10: calculateSma(points, 20),
     ma50: calculateSma(points, 50),
     ma100: calculateSma(points, 100),
     ma200: calculateSma(points, 200)
@@ -622,9 +636,8 @@ function calculateMacd(points) {
 }
 
 function drawLineCanvas(canvas, values, options = {}) {
+  const { width, height } = syncCanvasSize(canvas);
   const context = canvas.getContext("2d");
-  const width = canvas.width;
-  const height = canvas.height;
   context.clearRect(0, 0, width, height);
 
   const numericValues = values.filter((value) => value !== null);
@@ -678,9 +691,8 @@ function drawLineCanvas(canvas, values, options = {}) {
 }
 
 function drawMacdCanvas(canvas, macdData) {
+  const { width, height } = syncCanvasSize(canvas);
   const context = canvas.getContext("2d");
-  const width = canvas.width;
-  const height = canvas.height;
   context.clearRect(0, 0, width, height);
 
   const allValues = [...macdData.macd, ...macdData.signal, ...macdData.histogram].filter((value) => value !== null);
@@ -956,6 +968,7 @@ function aggregateBarsForPreset(bars, preset) {
 
 function renderSelectedChart(bars, rangeKey = activeChartRange) {
   const preset = CHART_PRESETS[rangeKey] || CHART_PRESETS["1d"];
+  currentChartSourceBars = bars;
   const timeframeBars = aggregateBarsForPreset(bars, preset);
   const displayBars = timeframeBars.map((bar) => ({
     ...bar,
@@ -973,7 +986,7 @@ function renderSelectedChart(bars, rangeKey = activeChartRange) {
       rsi14: fields.rsiValue.textContent,
       macd: fields.macdValue.textContent,
       movingAverages: {
-        ma10: fields.ma10.textContent,
+        ma20: fields.ma10.textContent,
         ma50: fields.ma50.textContent,
         ma100: fields.ma100.textContent,
         ma200: fields.ma200.textContent
@@ -1378,7 +1391,7 @@ async function loadVietnamStock(symbol) {
 
   const quote = parsed.quote;
   const overview = parsed.overview;
-  const bars = parsed.bars.slice(-260);
+  const bars = parsed.bars;
 
   const analysis = fillData(symbol, quote, overview, bars);
   latestPayload = {
@@ -1393,7 +1406,7 @@ async function loadVietnamStock(symbol) {
       rsi14: fields.rsiValue.textContent,
       macd: fields.macdValue.textContent,
       movingAverages: {
-        ma10: fields.ma10.textContent,
+        ma20: fields.ma10.textContent,
         ma50: fields.ma50.textContent,
         ma100: fields.ma100.textContent,
         ma200: fields.ma200.textContent
@@ -1439,6 +1452,26 @@ chartControls?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-chart-range]");
   if (!button) return;
   applyChartRange(button.dataset.chartRange);
+});
+
+fullscreenChartButton?.addEventListener("click", async () => {
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else {
+      await (chartWorkspace || chartSection).requestFullscreen();
+    }
+  } catch {
+    setMessage("Trình duyệt không cho phép phóng to biểu đồ.");
+  }
+});
+
+document.addEventListener("fullscreenchange", () => {
+  if (!fullscreenChartButton) return;
+  fullscreenChartButton.textContent = document.fullscreenElement ? "Thu nhỏ" : "Phóng to";
+  if (currentChartSourceBars.length) {
+    requestAnimationFrame(() => renderSelectedChart(currentChartSourceBars, activeChartRange));
+  }
 });
 
 tabs.forEach((tab) => {

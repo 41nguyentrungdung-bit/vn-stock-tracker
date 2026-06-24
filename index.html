@@ -66,10 +66,14 @@
           <article><span>Khối lượng</span><strong id="volume">-</strong></article>
         </section>
 
+        <div id="chartWorkspace" class="chart-workspace">
         <section class="chart-section">
           <div class="section-head">
             <h2>Biểu đồ giá kỹ thuật</h2>
-            <span id="chartRange">Giá + MA10/50/100/200</span>
+            <div class="chart-actions">
+              <span id="chartRange">Giá + MA20/50/100/200</span>
+              <button id="fullscreenChart" type="button" class="secondary chart-fullscreen">Phóng to</button>
+            </div>
           </div>
           <div class="chart-controls" aria-label="Chọn khung thời gian biểu đồ">
             <button type="button" data-chart-range="30m">30p</button>
@@ -86,13 +90,13 @@
           <canvas id="priceChart" width="960" height="420" aria-label="Biểu đồ giá kỹ thuật"></canvas>
           <div class="chart-legend">
             <span><i class="legend-price"></i>Giá</span>
-            <span><i class="legend-ma10"></i>MA10</span>
+            <span><i class="legend-ma10"></i>MA20</span>
             <span><i class="legend-ma50"></i>MA50</span>
             <span><i class="legend-ma100"></i>MA100</span>
             <span><i class="legend-ma200"></i>MA200</span>
           </div>
           <div class="ma-summary" aria-label="Giá trị đường trung bình động">
-            <article><span>MA 10</span><strong id="ma10">-</strong></article>
+            <article><span>MA 20</span><strong id="ma10">-</strong></article>
             <article><span>MA 50</span><strong id="ma50">-</strong></article>
             <article><span>MA 100</span><strong id="ma100">-</strong></article>
             <article><span>MA 200</span><strong id="ma200">-</strong></article>
@@ -116,6 +120,7 @@
             <canvas id="macdChart" width="460" height="220" aria-label="Biểu đồ MACD"></canvas>
           </article>
         </section>
+        </div>
 
         <section class="change-section">
           <div class="section-head">

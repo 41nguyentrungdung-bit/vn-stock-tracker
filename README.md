@@ -33,7 +33,7 @@ Không cần Alpha Vantage API key. App ưu tiên lấy dữ liệu từ Vietcap
 - Giá hiện tại, biến động, khối lượng và biểu đồ giá đóng cửa.
 - Đóng trước là giá đóng cửa của phiên liền trước, dùng làm mốc tính tăng/giảm.
 - Giá trần/sàn được lấy từ nguồn VCI khi có dữ liệu; nếu thiếu thì app tự tính theo biên độ HOSE 7%, HNX 10%, UPCOM 15% và làm tròn theo bước giá.
-- MA 10, MA 50, MA 100, MA 200 tính từ giá đóng cửa, hiển thị ngay dưới biểu đồ giá và vẽ trên biểu đồ.
+- MA 20, MA 50, MA 100, MA 200 tính từ giá đóng cửa của khung biểu đồ đang chọn, hiển thị ngay dưới biểu đồ giá và vẽ trên biểu đồ.
 - RSI 14 tính từ dữ liệu lịch sử giá đóng cửa.
 - MACD 12, 26, 9 tính từ dữ liệu lịch sử giá đóng cửa.
 - Bảng lịch sử 60 phiên gần nhất, có màu xanh/đỏ cho giá đóng cửa và % thay đổi theo từng phiên.

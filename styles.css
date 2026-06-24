@@ -369,6 +369,20 @@ button:hover {
   font-size: var(--font-small);
 }
 
+.chart-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.chart-fullscreen {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: var(--font-small);
+}
+
 .chart-controls {
   display: flex;
   flex-wrap: wrap;
@@ -400,6 +414,48 @@ canvas {
 
 #priceChart {
   height: 420px;
+}
+
+.chart-workspace:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  overflow: auto;
+  padding: 18px;
+  background: #211420;
+  color: #ffffff;
+}
+
+.chart-workspace:fullscreen .chart-section,
+.chart-workspace:fullscreen .indicator-card {
+  border-color: rgba(255, 244, 255, 0.18);
+  background: transparent;
+}
+
+.chart-workspace:fullscreen .indicator-grid {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.chart-workspace:fullscreen .section-head h2,
+.chart-workspace:fullscreen .section-head span,
+.chart-workspace:fullscreen .chart-legend,
+.chart-workspace:fullscreen .ma-summary span {
+  color: #fff4ff;
+}
+
+.chart-workspace:fullscreen canvas {
+  background: #17111a;
+}
+
+.chart-workspace:fullscreen #priceChart {
+  height: 48vh;
+  min-height: 420px;
+}
+
+.chart-workspace:fullscreen #rsiChart,
+.chart-workspace:fullscreen #macdChart {
+  height: 24vh;
+  min-height: 240px;
 }
 
 #rsiChart,

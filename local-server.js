@@ -21,17 +21,17 @@ const ALLOWED_PREFIXES = [
 ];
 
 const VCI_RANGE_CONFIG = {
-  "2y": { timeFrame: "ONE_DAY", lookbackDays: 730 },
+  "2y": { timeFrame: "ONE_DAY", lookbackDays: 2920 },
   "30m": { timeFrame: "ONE_MINUTE", lookbackDays: 120 },
   "1h": { timeFrame: "ONE_HOUR", lookbackDays: 365 },
   "2h": { timeFrame: "ONE_HOUR", lookbackDays: 500 },
   "4h": { timeFrame: "ONE_HOUR", lookbackDays: 730 },
-  "1d": { timeFrame: "ONE_DAY", lookbackDays: 730 },
-  "3d": { timeFrame: "ONE_DAY", lookbackDays: 730 },
-  "5d": { timeFrame: "ONE_DAY", lookbackDays: 730 },
-  "1w": { timeFrame: "ONE_DAY", lookbackDays: 30 },
-  "1m": { timeFrame: "ONE_DAY", lookbackDays: 70 },
-  "3m": { timeFrame: "ONE_DAY", lookbackDays: 160 }
+  "1d": { timeFrame: "ONE_DAY", lookbackDays: 2920 },
+  "3d": { timeFrame: "ONE_DAY", lookbackDays: 2920 },
+  "5d": { timeFrame: "ONE_DAY", lookbackDays: 2920 },
+  "1w": { timeFrame: "ONE_DAY", lookbackDays: 2920 },
+  "1m": { timeFrame: "ONE_DAY", lookbackDays: 2920 },
+  "3m": { timeFrame: "ONE_DAY", lookbackDays: 2920 }
 };
 
 function sendJson(res, statusCode, body) {
