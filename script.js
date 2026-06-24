@@ -1,5 +1,17 @@
 const API_BASE = "https://query1.finance.yahoo.com";
 const PROXY_BASE = "/.netlify/functions/vn-stock";
+const CHART_COLORS = {
+  text: "#6f5a6d",
+  grid: "#ead6ea",
+  price: "#880085",
+  ma10: "#378dde",
+  ma50: "#22bd3f",
+  ma100: "#af2a01",
+  ma200: "#e08c16",
+  positive: "#22bd3f",
+  negative: "#af2a01",
+  neutral: "#e08c16"
+};
 
 const form = document.getElementById("stockForm");
 const symbolInput = document.getElementById("symbol");
@@ -9,6 +21,7 @@ const chartCanvas = document.getElementById("priceChart");
 const rsiCanvas = document.getElementById("rsiChart");
 const macdCanvas = document.getElementById("macdChart");
 const quickSymbols = document.querySelector(".quick-symbols");
+const chartControls = document.querySelector(".chart-controls");
 const tabs = document.querySelectorAll(".tab");
 const tabPanels = {
   overview: document.getElementById("overviewPanel"),
@@ -65,7 +78,24 @@ const fields = {
   rawData: document.getElementById("rawData")
 };
 
+const CHART_PRESETS = {
+  "30m": { label: "30p", sourceRange: "30m", mode: "tail", count: 30, intraday: true },
+  "1h": { label: "1h", sourceRange: "1h", mode: "tail", count: 60, intraday: true },
+  "2h": { label: "2h", sourceRange: "2h", mode: "tail", count: 120, intraday: true },
+  "4h": { label: "4h", sourceRange: "4h", mode: "tail", count: 240, intraday: true },
+  "1d": { label: "1 ngày", sourceRange: "1d", mode: "tradingDays", count: 1, intraday: true },
+  "3d": { label: "3 ngày", sourceRange: "3d", mode: "tradingDays", count: 3, intraday: true },
+  "5d": { label: "5 ngày", sourceRange: "5d", mode: "tradingDays", count: 5, intraday: true },
+  "1w": { label: "1 tuần", sourceRange: "1w", mode: "calendarDays", days: 7 },
+  "1m": { label: "1 tháng", sourceRange: "1m", mode: "calendarDays", days: 31 },
+  "3m": { label: "3 tháng", sourceRange: "3m", mode: "calendarDays", days: 93 }
+};
+
 let latestPayload = null;
+let currentSymbol = "";
+let currentDailyBars = [];
+let activeChartRange = "3m";
+let chartRequestId = 0;
 
 function setMessage(text) {
   message.textContent = text;
@@ -162,7 +192,8 @@ function formatPercent(value) {
 
 function valueClass(value) {
   const number = toNumber(value);
-  if (number === null || number === 0) return "";
+  if (number === null) return "";
+  if (number === 0) return "neutral";
   return number > 0 ? "positive" : "negative";
 }
 
@@ -207,12 +238,12 @@ async function requestJson(path) {
   return response.json();
 }
 
-async function requestVciData(symbol) {
+async function requestVciData(symbol, range = "2y") {
   if (location.protocol === "file:") {
     throw new Error("Đang mở bằng file:// nên không có proxy dữ liệu. Hãy chạy local-server.js rồi mở http://localhost:8787.");
   }
 
-  const response = await fetch(`${PROXY_BASE}?source=vci&symbol=${encodeURIComponent(symbol)}`, {
+  const response = await fetch(`${PROXY_BASE}?source=vci&symbol=${encodeURIComponent(symbol)}&range=${encodeURIComponent(range)}`, {
     headers: { accept: "application/json" }
   });
   if (!response.ok) {
@@ -241,6 +272,7 @@ function parseYahooChart(rawData) {
   const timestamps = result.timestamp || [];
   const bars = timestamps
     .map((timestamp, index) => ({
+      timestamp: timestamp * 1000,
       time: new Date(timestamp * 1000).toLocaleDateString("vi-VN"),
       open: toNumber(quoteData.open?.[index]),
       high: toNumber(quoteData.high?.[index]),
@@ -312,14 +344,18 @@ function parseVciData(rawData) {
   const listing = board.listingInfo || {};
   const match = board.matchPrice || {};
   const exchange = boardName(listing.board);
-  const bars = chart.c.map((close, index) => ({
-    time: new Date(Number(chart.t[index]) * 1000).toLocaleDateString("vi-VN"),
-    open: toNumber(chart.o?.[index]),
-    high: toNumber(chart.h?.[index]),
-    low: toNumber(chart.l?.[index]),
-    close: toNumber(close),
-    volume: toNumber(chart.v?.[index])
-  })).filter((item) => item.close !== null);
+  const bars = chart.c.map((close, index) => {
+    const timestamp = Number(chart.t[index]) * 1000;
+    return {
+      timestamp,
+      time: new Date(timestamp).toLocaleDateString("vi-VN"),
+      open: toNumber(chart.o?.[index]),
+      high: toNumber(chart.h?.[index]),
+      low: toNumber(chart.l?.[index]),
+      close: toNumber(close),
+      volume: toNumber(chart.v?.[index])
+    };
+  }).filter((item) => item.close !== null);
 
   const latestBar = bars[bars.length - 1] || {};
   const previousBar = bars[bars.length - 2] || {};
@@ -379,7 +415,7 @@ function drawChart(points) {
   context.clearRect(0, 0, width, height);
 
   if (!points.length) {
-    context.fillStyle = "#78716c";
+    context.fillStyle = CHART_COLORS.text;
     context.font = "18px Arial";
     context.fillText("Chưa có dữ liệu biểu đồ.", 24, 48);
     return;
@@ -391,7 +427,7 @@ function drawChart(points) {
   const max = Math.max(...closes);
   const span = max - min || 1;
 
-  context.strokeStyle = "#eadbd0";
+  context.strokeStyle = CHART_COLORS.grid;
   context.lineWidth = 1;
   for (let index = 0; index < 5; index += 1) {
     const y = padding + ((height - padding * 2) / 4) * index;
@@ -408,16 +444,16 @@ function drawChart(points) {
     if (index === 0) context.moveTo(x, y);
     else context.lineTo(x, y);
   });
-  context.strokeStyle = "#dc2626";
+  context.strokeStyle = CHART_COLORS.price;
   context.lineWidth = 3;
   context.stroke();
 
   const movingAverages = calculateMovingAverages(points);
   [
-    { values: movingAverages.ma10, color: "#2563eb" },
-    { values: movingAverages.ma50, color: "#047857" },
-    { values: movingAverages.ma100, color: "#7c3aed" },
-    { values: movingAverages.ma200, color: "#f59e0b" }
+    { values: movingAverages.ma10, color: CHART_COLORS.ma10 },
+    { values: movingAverages.ma50, color: CHART_COLORS.ma50 },
+    { values: movingAverages.ma100, color: CHART_COLORS.ma100 },
+    { values: movingAverages.ma200, color: CHART_COLORS.ma200 }
   ].forEach((series) => {
     context.beginPath();
     let started = false;
@@ -437,7 +473,7 @@ function drawChart(points) {
     context.stroke();
   });
 
-  context.fillStyle = "#78716c";
+  context.fillStyle = CHART_COLORS.text;
   context.font = "13px Arial";
   context.fillText(formatPrice(max), 8, padding + 4);
   context.fillText(formatPrice(min), 8, height - padding + 4);
@@ -554,7 +590,7 @@ function drawLineCanvas(canvas, values, options = {}) {
 
   const numericValues = values.filter((value) => value !== null);
   if (!numericValues.length) {
-    context.fillStyle = "#78716c";
+    context.fillStyle = CHART_COLORS.text;
     context.font = "16px Arial";
     context.fillText("Chưa đủ dữ liệu.", 18, 38);
     return;
@@ -565,7 +601,7 @@ function drawLineCanvas(canvas, values, options = {}) {
   const max = options.max ?? Math.max(...numericValues);
   const span = max - min || 1;
 
-  context.strokeStyle = "#eadbd0";
+  context.strokeStyle = CHART_COLORS.grid;
   context.lineWidth = 1;
   for (let index = 0; index < 4; index += 1) {
     const y = padding + ((height - padding * 2) / 3) * index;
@@ -597,7 +633,7 @@ function drawLineCanvas(canvas, values, options = {}) {
     if (index === values.findIndex((item) => item !== null)) context.moveTo(x, y);
     else context.lineTo(x, y);
   });
-  context.strokeStyle = options.color || "#dc2626";
+  context.strokeStyle = options.color || CHART_COLORS.price;
   context.lineWidth = 2.5;
   context.stroke();
 }
@@ -610,7 +646,7 @@ function drawMacdCanvas(canvas, macdData) {
 
   const allValues = [...macdData.macd, ...macdData.signal, ...macdData.histogram].filter((value) => value !== null);
   if (!allValues.length) {
-    context.fillStyle = "#78716c";
+    context.fillStyle = CHART_COLORS.text;
     context.font = "16px Arial";
     context.fillText("Chưa đủ dữ liệu.", 18, 38);
     return;
@@ -625,7 +661,7 @@ function drawMacdCanvas(canvas, macdData) {
   const yFor = (value) => height - padding - ((value - min) / span) * (height - padding * 2);
   const xFor = (index) => padding + ((width - padding * 2) / Math.max(macdData.macd.length - 1, 1)) * index;
 
-  context.strokeStyle = "#eadbd0";
+  context.strokeStyle = CHART_COLORS.grid;
   context.lineWidth = 1;
   [min, 0, max].forEach((value) => {
     const y = yFor(value);
@@ -640,7 +676,7 @@ function drawMacdCanvas(canvas, macdData) {
     const x = xFor(index);
     const zeroY = yFor(0);
     const y = yFor(value);
-    context.strokeStyle = value >= 0 ? "#047857" : "#b91c1c";
+    context.strokeStyle = value > 0 ? CHART_COLORS.positive : value < 0 ? CHART_COLORS.negative : CHART_COLORS.neutral;
     context.lineWidth = 4;
     context.beginPath();
     context.moveTo(x, zeroY);
@@ -649,8 +685,8 @@ function drawMacdCanvas(canvas, macdData) {
   });
 
   [
-    { values: macdData.macd, color: "#dc2626" },
-    { values: macdData.signal, color: "#2563eb" }
+    { values: macdData.macd, color: CHART_COLORS.price },
+    { values: macdData.signal, color: CHART_COLORS.ma10 }
   ].forEach((line) => {
     context.beginPath();
     let started = false;
@@ -686,10 +722,10 @@ function renderIndicators(bars) {
   drawLineCanvas(rsiCanvas, rsi, {
     min: 0,
     max: 100,
-    color: "#dc2626",
+    color: CHART_COLORS.price,
     guides: [
-      { value: 70, color: "#b91c1c", label: "70" },
-      { value: 30, color: "#047857", label: "30" }
+      { value: 70, color: CHART_COLORS.negative, label: "70" },
+      { value: 30, color: CHART_COLORS.positive, label: "30" }
     ]
   });
   drawMacdCanvas(macdCanvas, macd);
@@ -712,8 +748,8 @@ function renderInvestorFlow(quote) {
   fields.domesticBuy.textContent = formatLargeNumber(domesticBuy);
   fields.domesticSell.textContent = formatLargeNumber(domesticSell);
   fields.domesticNet.textContent = formatLargeNumber(domesticNet);
-  fields.foreignNet.classList.remove("positive", "negative");
-  fields.domesticNet.classList.remove("positive", "negative");
+  fields.foreignNet.classList.remove("positive", "negative", "neutral");
+  fields.domesticNet.classList.remove("positive", "negative", "neutral");
   const foreignClass = valueClass(foreignNet);
   const domesticClass = valueClass(domesticNet);
   if (foreignClass) fields.foreignNet.classList.add(foreignClass);
@@ -754,19 +790,20 @@ function renderPriceChanges(bars) {
     const compare = bars[bars.length - 1 - period]?.close;
     const change = latest && compare ? ((latest - compare) / compare) * 100 : null;
     target.textContent = formatPercent(change);
-    target.classList.remove("positive", "negative");
+    target.classList.remove("positive", "negative", "neutral");
     const className = valueClass(change);
     if (className) target.classList.add(className);
   });
 }
 
 function updatePriceColor(price, reference, target) {
-  target.classList.remove("positive", "negative", "ceiling", "floor");
+  target.classList.remove("positive", "negative", "neutral", "ceiling", "floor");
   const current = toNumber(price);
   const ref = toNumber(reference);
   if (current === null || ref === null) return;
   if (current > ref) target.classList.add("positive");
   if (current < ref) target.classList.add("negative");
+  if (current === ref) target.classList.add("neutral");
 }
 
 function renderMovingAverages(bars) {
@@ -775,10 +812,11 @@ function renderMovingAverages(bars) {
   const currentPrice = bars[bars.length - 1]?.close;
   const renderMa = (target, value) => {
     target.textContent = formatOptional(value, 2);
-    target.classList.remove("positive", "negative");
+    target.classList.remove("positive", "negative", "neutral");
     if (toNumber(value) === null || toNumber(currentPrice) === null) return;
     if (currentPrice > value) target.classList.add("positive");
     if (currentPrice < value) target.classList.add("negative");
+    if (currentPrice === value) target.classList.add("neutral");
   };
 
   renderMa(fields.ma10, latestValue(movingAverages.ma10));
@@ -787,6 +825,109 @@ function renderMovingAverages(bars) {
   renderMa(fields.ma200, latestValue(movingAverages.ma200));
 
   return movingAverages;
+}
+
+function setActiveChartButton(rangeKey) {
+  chartControls?.querySelectorAll("button[data-chart-range]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.chartRange === rangeKey);
+  });
+}
+
+function barDateKey(bar) {
+  const timestamp = toNumber(bar.timestamp);
+  if (timestamp === null) return safeText(bar.time);
+  return new Date(timestamp).toLocaleDateString("vi-VN");
+}
+
+function formatChartPointTime(bar, preset) {
+  const timestamp = toNumber(bar.timestamp);
+  if (timestamp === null) return safeText(bar.time);
+  const date = new Date(timestamp);
+  if (preset.intraday && preset.mode === "tail") {
+    return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+  }
+  if (preset.intraday) {
+    return `${date.toLocaleDateString("vi-VN")} ${date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`;
+  }
+  return date.toLocaleDateString("vi-VN");
+}
+
+function filterBarsForPreset(bars, preset) {
+  if (!bars.length) return [];
+
+  if (preset.mode === "tail") {
+    return bars.slice(-preset.count);
+  }
+
+  if (preset.mode === "tradingDays") {
+    const dateKeys = [];
+    [...bars].reverse().forEach((bar) => {
+      const key = barDateKey(bar);
+      if (!dateKeys.includes(key)) dateKeys.push(key);
+    });
+    const allowed = new Set(dateKeys.slice(0, preset.count));
+    return bars.filter((bar) => allowed.has(barDateKey(bar)));
+  }
+
+  if (preset.mode === "calendarDays") {
+    const latestTimestamp = toNumber(bars[bars.length - 1]?.timestamp);
+    if (latestTimestamp === null) return bars.slice(-preset.days);
+    const cutoff = latestTimestamp - preset.days * 86400 * 1000;
+    return bars.filter((bar) => toNumber(bar.timestamp) === null || bar.timestamp >= cutoff);
+  }
+
+  return bars;
+}
+
+function renderSelectedChart(bars, rangeKey = activeChartRange) {
+  const preset = CHART_PRESETS[rangeKey] || CHART_PRESETS["3m"];
+  const filtered = filterBarsForPreset(bars, preset);
+  const displayBars = filtered.map((bar) => ({
+    ...bar,
+    time: formatChartPointTime(bar, preset)
+  }));
+
+  drawChart(displayBars);
+  renderMovingAverages(displayBars);
+  fields.chartRange.textContent = `${preset.label} - ${displayBars.length} điểm dữ liệu`;
+  return displayBars;
+}
+
+async function applyChartRange(rangeKey) {
+  if (!currentSymbol) {
+    setMessage("Hãy nhập mã chứng khoán trước khi chọn khung biểu đồ.");
+    return;
+  }
+
+  const preset = CHART_PRESETS[rangeKey] || CHART_PRESETS["3m"];
+  activeChartRange = rangeKey;
+  setActiveChartButton(rangeKey);
+
+  if (!preset.intraday) {
+    renderSelectedChart(currentDailyBars, rangeKey);
+    setMessage("");
+    return;
+  }
+
+  const requestId = chartRequestId + 1;
+  chartRequestId = requestId;
+  fields.chartRange.textContent = `Đang tải biểu đồ ${preset.label}...`;
+
+  try {
+    const raw = await requestVciData(currentSymbol, preset.sourceRange);
+    if (requestId !== chartRequestId) return;
+    const parsed = parseVciData(raw);
+    if (!parsed || !parsed.bars.length) {
+      throw new Error("Không có dữ liệu cho khung biểu đồ này.");
+    }
+    renderSelectedChart(parsed.bars, rangeKey);
+    setMessage("");
+  } catch (error) {
+    renderSelectedChart(currentDailyBars, "3m");
+    setActiveChartButton("3m");
+    activeChartRange = "3m";
+    setMessage(error.message || "Không tải được dữ liệu biểu đồ.");
+  }
 }
 
 function latestNonNull(series) {
@@ -1072,7 +1213,7 @@ function fillData(symbol, quote, overview, bars) {
   fields.companyName.textContent = safeText(overview.name) !== "-" ? overview.name : symbol;
   fields.companyDescription.textContent = safeText(overview.description) !== "-"
     ? overview.description
-    : "Du lieu duoc lay tu nguon cong khai TCBS. Mot so truong co the trong tuy theo ma co phieu.";
+    : "Dữ liệu được lấy từ nguồn công khai. Một số trường có thể trống tùy theo mã cổ phiếu.";
   fields.currentPrice.textContent = formatPrice(currentPrice);
   fields.priceChange.textContent = `${toNumber(change) > 0 ? "+" : ""}${formatPrice(change)} (${formatPercent(changePercent)})`;
   updatePriceColor(currentPrice, reference, fields.priceChange);
@@ -1097,25 +1238,28 @@ function fillData(symbol, quote, overview, bars) {
   fields.eps.textContent = safeText(overview.eps);
   fields.beta.textContent = safeText(overview.beta);
 
-  drawChart(bars);
-  const movingAverages = renderMovingAverages(bars);
+  currentSymbol = symbol;
+  currentDailyBars = bars;
+  activeChartRange = "3m";
+  setActiveChartButton(activeChartRange);
+  renderSelectedChart(bars, activeChartRange);
+  const movingAverages = calculateMovingAverages(bars);
   const indicators = renderIndicators(bars);
   renderPriceChanges(bars);
   renderInvestorFlow(quote);
   renderHistory(bars);
   const score = renderScoreAnalysis(symbol, quote, overview, bars, movingAverages, indicators);
-  fields.chartRange.textContent = `${bars.length} phien gan nhat`;
   return { movingAverages, indicators, score };
 }
 
 async function loadVietnamStock(symbol) {
-  setMessage("Dang tai du lieu...");
+  setMessage("Đang tải dữ liệu...");
 
   let parsed = null;
   let lastError = null;
 
   try {
-    const rawVci = await requestVciData(symbol);
+    const rawVci = await requestVciData(symbol, "2y");
     parsed = parseVciData(rawVci);
   } catch (error) {
     lastError = error;
@@ -1134,7 +1278,7 @@ async function loadVietnamStock(symbol) {
   }
 
   if (!parsed || !parsed.bars.length) {
-    throw new Error(lastError?.message || "Khong tim thay ma chung khoan Viet Nam nay tren Yahoo Finance.");
+    throw new Error(lastError?.message || "Không tìm thấy mã chứng khoán Việt Nam này trên nguồn dữ liệu hiện tại.");
   }
 
   const quote = parsed.quote;
@@ -1162,12 +1306,12 @@ async function loadVietnamStock(symbol) {
     score: analysis.score,
     investorFlow: {
       status: parsed.source === "Vietcap/VCI"
-        ? "Du lieu bang gia VCI neu co"
-        : "Yahoo Finance khong cung cap du lieu mua/ban theo nhom nha dau tu"
+        ? "Dữ liệu bảng giá VCI nếu có"
+        : "Yahoo Finance không cung cấp dữ liệu mua/bán theo nhóm nhà đầu tư"
     }
   };
   fields.rawData.textContent = JSON.stringify(latestPayload, null, 2);
-  fields.lastUpdated.textContent = `Cap nhat: ${new Date().toLocaleString("vi-VN")}`;
+  fields.lastUpdated.textContent = `Cập nhật: ${new Date().toLocaleString("vi-VN")}`;
   setMessage("");
 }
 
@@ -1176,7 +1320,7 @@ form.addEventListener("submit", async (event) => {
   const symbol = symbolInput.value.trim().toUpperCase();
 
   if (!symbol) {
-    setMessage("Hay nhap ma chung khoan Viet Nam.");
+    setMessage("Hãy nhập mã chứng khoán Việt Nam.");
     symbolInput.focus();
     return;
   }
@@ -1184,7 +1328,7 @@ form.addEventListener("submit", async (event) => {
   try {
     await loadVietnamStock(symbol);
   } catch (error) {
-    setMessage(error.message || "Khong tai duoc du lieu.");
+    setMessage(error.message || "Không tải được dữ liệu.");
   }
 });
 
@@ -1195,21 +1339,27 @@ quickSymbols.addEventListener("click", (event) => {
   form.requestSubmit();
 });
 
+chartControls?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-chart-range]");
+  if (!button) return;
+  applyChartRange(button.dataset.chartRange);
+});
+
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => setActiveTab(tab.dataset.tab));
 });
 
 copyButton.addEventListener("click", async () => {
   if (!latestPayload) {
-    setMessage("Chua co du lieu de copy.");
+    setMessage("Chưa có dữ liệu để copy.");
     return;
   }
 
   try {
     await navigator.clipboard.writeText(JSON.stringify(latestPayload, null, 2));
-    setMessage("Da copy JSON.");
+    setMessage("Đã copy JSON.");
   } catch {
-    setMessage("Khong copy duoc. Hay boi den phan JSON va copy thu cong.");
+    setMessage("Không copy được. Hãy bôi đen phần JSON và copy thủ công.");
   }
 });
 

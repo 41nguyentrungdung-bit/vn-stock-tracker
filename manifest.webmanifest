@@ -1,12 +1,12 @@
 {
-  "name": "Theo doi chung khoan Viet Nam",
-  "short_name": "CK Viet Nam",
-  "description": "Website theo doi gia va chi so cua cac ma chung khoan Viet Nam.",
+  "name": "Theo dõi chứng khoán Việt Nam",
+  "short_name": "CK Việt Nam",
+  "description": "Website theo dõi giá và chỉ số của các mã chứng khoán Việt Nam.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#fff7ed",
-  "theme_color": "#7f1d1d",
+  "background_color": "#fbf4fb",
+  "theme_color": "#880085",
   "icons": [
     {
       "src": "icon.svg",
@@ -16,4 +16,3 @@
     }
   ]
 }
-

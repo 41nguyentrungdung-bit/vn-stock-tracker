@@ -1,17 +1,21 @@
 :root {
   color-scheme: light;
-  --bg: #fff7ed;
+  --bg: #fbf4fb;
   --panel: #ffffff;
-  --text: #1c1917;
-  --muted: #78716c;
-  --border: #eadbd0;
-  --soft: #fff1e6;
-  --primary: #7f1d1d;
-  --accent: #dc2626;
-  --green: #047857;
-  --red: #b91c1c;
-  --purple: #7c3aed;
-  --blue: #2563eb;
+  --text: #211420;
+  --muted: #6f5a6d;
+  --border: #ead6ea;
+  --soft: #f7e8f7;
+  --primary: #880085;
+  --primary-dark: #5f005d;
+  --red: #af2a01;
+  --blue: #378dde;
+  --green: #22bd3f;
+  --orange: #e08c16;
+  --white: #ffffff;
+  --font-large: 32px;
+  --font-medium: 20px;
+  --font-small: 14px;
 }
 
 * {
@@ -21,9 +25,10 @@
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
   background: var(--bg);
   color: var(--text);
+  font-size: 16px;
 }
 
 .app {
@@ -38,7 +43,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 18px 46px rgba(127, 29, 29, 0.13);
+  box-shadow: 0 18px 46px rgba(136, 0, 133, 0.14);
 }
 
 .hero {
@@ -46,8 +51,8 @@ body {
   justify-content: space-between;
   gap: 18px;
   padding: 24px;
-  background: var(--primary);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: var(--white);
 }
 
 h1,
@@ -58,12 +63,16 @@ p {
 
 h1 {
   margin-bottom: 8px;
-  font-size: 30px;
+  font-size: var(--font-large);
+  line-height: 1.15;
+  letter-spacing: 0;
 }
 
 .hero p {
   margin-bottom: 0;
-  color: #ffe4e6;
+  color: #ffe8ff;
+  font-size: 16px;
+  line-height: 1.55;
 }
 
 .eyebrow {
@@ -71,10 +80,11 @@ h1 {
   margin-bottom: 8px;
   color: var(--muted);
   font-weight: 700;
+  font-size: var(--font-small);
 }
 
 .hero .eyebrow {
-  color: #fecaca;
+  color: #ffd6ff;
 }
 
 .pill {
@@ -83,7 +93,8 @@ h1 {
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 999px;
   padding: 8px 12px;
-  color: #ffe4e6;
+  color: #ffe8ff;
+  font-size: var(--font-small);
 }
 
 .search-panel,
@@ -110,12 +121,13 @@ h1 {
   padding: 0 18px;
   background: #ffffff;
   color: var(--muted);
+  font-size: var(--font-small);
 }
 
 .tab.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #ffffff;
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--white);
 }
 
 .tab-panel[hidden] {
@@ -153,16 +165,16 @@ input {
 }
 
 input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.14);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(136, 0, 133, 0.14);
 }
 
 button {
   min-height: 48px;
-  border: 1px solid var(--accent);
+  border: 1px solid var(--green);
   border-radius: 8px;
   padding: 0 18px;
-  background: var(--accent);
+  background: var(--green);
   color: #ffffff;
   font-size: 16px;
   font-weight: 700;
@@ -176,7 +188,7 @@ button:hover {
 .secondary,
 .quick-symbols button {
   background: #ffffff;
-  color: var(--accent);
+  color: var(--green);
 }
 
 .quick-symbols {
@@ -188,7 +200,7 @@ button:hover {
 .quick-symbols button {
   min-height: 36px;
   padding: 0 12px;
-  font-size: 14px;
+  font-size: var(--font-small);
 }
 
 .message {
@@ -211,6 +223,7 @@ button:hover {
 .quote-card h2 {
   margin-bottom: 8px;
   font-size: 28px;
+  line-height: 1.2;
 }
 
 .quote-card p {
@@ -223,7 +236,7 @@ button:hover {
   min-width: 230px;
   padding: 18px;
   border-radius: 8px;
-  background: #fff1f2;
+  background: #f7e8f7;
   text-align: right;
 }
 
@@ -235,7 +248,8 @@ button:hover {
 .price-box strong {
   display: block;
   margin: 8px 0;
-  font-size: 36px;
+  font-size: 40px;
+  line-height: 1.05;
 }
 
 .price-box em {
@@ -251,8 +265,12 @@ button:hover {
   color: var(--red);
 }
 
+.neutral {
+  color: var(--orange);
+}
+
 .ceiling {
-  color: var(--purple);
+  color: var(--primary);
 }
 
 .floor {
@@ -277,10 +295,12 @@ button:hover {
   display: block;
   margin-bottom: 8px;
   color: var(--muted);
+  font-size: var(--font-small);
 }
 
 .metrics-grid strong {
   overflow-wrap: anywhere;
+  font-size: 18px;
 }
 
 .chart-section,
@@ -340,11 +360,35 @@ button:hover {
 
 .section-head h2 {
   margin-bottom: 0;
-  font-size: 20px;
+  font-size: var(--font-medium);
+  line-height: 1.25;
 }
 
 .section-head span {
   color: var(--muted);
+  font-size: var(--font-small);
+}
+
+.chart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.chart-controls button {
+  min-height: 34px;
+  border-color: var(--border);
+  padding: 0 12px;
+  background: #ffffff;
+  color: var(--primary);
+  font-size: var(--font-small);
+}
+
+.chart-controls button.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
 }
 
 canvas {
@@ -383,7 +427,7 @@ canvas {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px;
-  background: #fff7ed;
+  background: #fff8ee;
 }
 
 .ma-summary span {
@@ -419,23 +463,23 @@ canvas {
 }
 
 .legend-price {
-  background: #dc2626;
+  background: #880085;
 }
 
 .legend-ma10 {
-  background: #2563eb;
+  background: #378dde;
 }
 
 .legend-ma50 {
-  background: #047857;
+  background: #22bd3f;
 }
 
 .legend-ma100 {
-  background: #7c3aed;
+  background: #af2a01;
 }
 
 .legend-ma200 {
-  background: #f59e0b;
+  background: #e08c16;
 }
 
 .note {
@@ -474,6 +518,7 @@ th {
   background: var(--soft);
   color: var(--muted);
   font-weight: 700;
+  font-size: var(--font-small);
 }
 
 tr:last-child td {
@@ -489,6 +534,12 @@ strong.positive {
 td.negative,
 strong.negative {
   color: var(--red);
+  font-weight: 800;
+}
+
+td.neutral,
+strong.neutral {
+  color: var(--orange);
   font-weight: 800;
 }
 
@@ -542,7 +593,7 @@ strong.negative {
   margin-top: 8px;
   padding: 6px 10px;
   border-radius: 999px;
-  background: #fff1f2;
+  background: #f7e8f7;
   color: var(--primary);
   font-weight: 800;
 }
@@ -600,8 +651,8 @@ pre {
   margin: 0;
   padding: 14px;
   border-radius: 8px;
-  background: #1c1917;
-  color: #ffedd5;
+  background: #211420;
+  color: #fff4ff;
   white-space: pre-wrap;
   word-break: break-word;
 }

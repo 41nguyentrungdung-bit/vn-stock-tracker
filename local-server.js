@@ -20,6 +20,20 @@ const ALLOWED_PREFIXES = [
   "/v8/finance/chart/"
 ];
 
+const VCI_RANGE_CONFIG = {
+  "2y": { timeFrame: "ONE_DAY", lookbackDays: 730 },
+  "30m": { timeFrame: "ONE_MINUTE", lookbackDays: 10 },
+  "1h": { timeFrame: "ONE_MINUTE", lookbackDays: 10 },
+  "2h": { timeFrame: "ONE_MINUTE", lookbackDays: 10 },
+  "4h": { timeFrame: "ONE_MINUTE", lookbackDays: 10 },
+  "1d": { timeFrame: "ONE_MINUTE", lookbackDays: 10 },
+  "3d": { timeFrame: "ONE_HOUR", lookbackDays: 14 },
+  "5d": { timeFrame: "ONE_HOUR", lookbackDays: 21 },
+  "1w": { timeFrame: "ONE_DAY", lookbackDays: 30 },
+  "1m": { timeFrame: "ONE_DAY", lookbackDays: 70 },
+  "3m": { timeFrame: "ONE_DAY", lookbackDays: 160 }
+};
+
 function sendJson(res, statusCode, body) {
   res.writeHead(statusCode, {
     "content-type": "application/json; charset=utf-8",
@@ -36,8 +50,10 @@ async function handleProxy(req, res, url) {
       return;
     }
 
+    const range = url.searchParams.get("range") || "2y";
+    const rangeConfig = VCI_RANGE_CONFIG[range] || VCI_RANGE_CONFIG["2y"];
     const now = Math.floor(Date.now() / 1000) + 86400;
-    const from = now - 86400 * 730;
+    const from = now - 86400 * rangeConfig.lookbackDays;
     const headers = {
       accept: "application/json, text/plain, */*",
       "content-type": "application/json",
@@ -52,7 +68,7 @@ async function handleProxy(req, res, url) {
           method: "POST",
           headers,
           body: JSON.stringify({
-            timeFrame: "ONE_DAY",
+            timeFrame: rangeConfig.timeFrame,
             symbols: [symbol],
             from,
             to: now
@@ -70,6 +86,8 @@ async function handleProxy(req, res, url) {
       sendJson(res, chartResponse.ok && boardResponse.ok ? 200 : 502, {
         source: "VCI",
         symbol,
+        range,
+        timeFrame: rangeConfig.timeFrame,
         chart,
         board
       });

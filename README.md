@@ -1,65 +1,65 @@
-# Theo doi chung khoan Viet Nam
+# Theo dõi chứng khoán Việt Nam
 
-Website de theo doi cac ma co phieu Viet Nam nhu `FPT`, `VNM`, `VCB`, `HPG`, `MWG`, `SSI`.
+Website để theo dõi các mã cổ phiếu Việt Nam như `FPT`, `VNM`, `VCB`, `HPG`, `MWG`, `SSI`.
 
-## Cach dung
+## Cách dùng
 
-### Chay thu tren may tinh
+### Chạy thử trên máy tính
 
-Khong mo truc tiep bang `file://`. Hay chay local server:
+Không mở trực tiếp bằng `file://`. Hãy chạy local server:
 
 ```powershell
 cd C:\Users\Admin\Documents\Codex\2026-06-23\t\outputs\stock_tracker_app
 & "C:\Users\Admin\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe" .\local-server.js
 ```
 
-Sau do mo:
+Sau đó mở:
 
 ```text
 http://localhost:8787
 ```
 
-### Chay online
+### Chạy online
 
-1. Deploy app len Netlify kem thu muc `netlify/functions`.
-2. Mo website Netlify.
-3. Nhap ma chung khoan Viet Nam.
-4. Bam `Tai du lieu`.
+1. Deploy app lên Netlify kèm thư mục `netlify/functions`.
+2. Mở website Netlify.
+3. Nhập mã chứng khoán Việt Nam.
+4. Bấm `Tải dữ liệu`.
 
-Khong can Alpha Vantage API key. App uu tien lay du lieu tu Vietcap/VCI de ho tro HOSE, HNX, UPCOM; neu VCI loi moi fallback sang Yahoo Finance.
+Không cần Alpha Vantage API key. App ưu tiên lấy dữ liệu từ Vietcap/VCI để hỗ trợ HOSE, HNX, UPCOM; nếu VCI lỗi mới fallback sang Yahoo Finance.
 
-## Tinh nang
+## Tính năng
 
-- Gia hien tai, bien dong, khoi luong va bieu do gia dong cua.
-- Dong truoc la gia dong cua cua phien lien truoc, dung lam moc tinh tang/giam.
-- Gia tran/san duoc tinh tu Dong truoc theo bien do HOSE 7%, HNX 10%, UPCOM 15% va lam tron theo buoc gia.
-- MA 10, MA 50, MA 100, MA 200 tinh tu gia dong cua, hien thi ngay duoi bieu do gia va ve tren bieu do.
-- RSI 14 tinh tu du lieu lich su gia dong cua.
-- MACD 12, 26, 9 tinh tu du lieu lich su gia dong cua.
-- Bang lich su 60 phien gan nhat, co mau xanh/do cho gia dong cua va % thay doi theo tung phien.
-- Vung tong hop % thay doi gia trong 3, 7, 10, 14, 21, 30 phien.
-- Tab bang danh gia theo thang diem 100.
-- Bang danh gia tu dong cap nhat theo ma dang tra cuu, gom xu huong, volume, RSI, MACD, ho tro/khang cu, co ban/tin tuc, suc manh nganh va risk/reward.
-- Gia tri mua/ban nuoc ngoai va uoc tinh trong nuoc lay tu du lieu bang gia VCI khi nguon tra ve.
+- Giá hiện tại, biến động, khối lượng và biểu đồ giá đóng cửa.
+- Đóng trước là giá đóng cửa của phiên liền trước, dùng làm mốc tính tăng/giảm.
+- Giá trần/sàn được lấy từ nguồn VCI khi có dữ liệu; nếu thiếu thì app tự tính theo biên độ HOSE 7%, HNX 10%, UPCOM 15% và làm tròn theo bước giá.
+- MA 10, MA 50, MA 100, MA 200 tính từ giá đóng cửa, hiển thị ngay dưới biểu đồ giá và vẽ trên biểu đồ.
+- RSI 14 tính từ dữ liệu lịch sử giá đóng cửa.
+- MACD 12, 26, 9 tính từ dữ liệu lịch sử giá đóng cửa.
+- Bảng lịch sử 60 phiên gần nhất, có màu xanh/đỏ cho giá đóng cửa và % thay đổi theo từng phiên.
+- Vùng tổng hợp % thay đổi giá trong 3, 7, 10, 14, 21, 30 phiên.
+- Tab bảng đánh giá theo thang điểm 100.
+- Bảng đánh giá tự động cập nhật theo mã đang tra cứu, gồm xu hướng, volume, RSI, MACD, hỗ trợ/kháng cự, cơ bản/tin tức, sức mạnh ngành và risk/reward.
+- Giá trị mua/bán nước ngoài và ước tính trong nước lấy từ dữ liệu bảng giá VCI khi nguồn trả về.
 
-## Dua len website
+## Đưa lên website
 
-Nen deploy bang Git/Netlify project de Netlify Function hoat dong. Neu chi mo bang `file://`, trinh duyet co the bao `Failed to fetch` vi API chung khoan chan CORS.
+Nên deploy bằng Git/Netlify project để Netlify Function hoạt động. Nếu chỉ mở bằng `file://`, trình duyệt có thể báo `Failed to fetch` vì API chứng khoán chặn CORS.
 
 Thu muc function nam tai:
 
 `netlify/functions/vn-stock.js`
 
-Sau khi deploy dung, app se goi du lieu qua:
+Sau khi deploy đúng, app sẽ gọi dữ liệu qua:
 
 `/.netlify/functions/vn-stock`
 
-## Luu y ve loi Failed to fetch
+## Lưu ý về lỗi Failed to fetch
 
-Loi nay thuong xay ra khi browser goi truc tiep den API TCBS va bi chan CORS. Proxy serverless trong thu muc `netlify/functions` la cach xu ly dung hon cho website online.
+Lỗi này thường xảy ra khi browser gọi trực tiếp đến API chứng khoán và bị chặn CORS. Proxy serverless trong thư mục `netlify/functions` là cách xử lý đúng hơn cho website online.
 
-## Luu y
+## Lưu ý
 
-- App dung Yahoo Finance chart API qua proxy, khong phai API chinh thuc co SLA cho san pham thuong mai.
-- Neu can san pham on dinh de kinh doanh, nen dung nha cung cap du lieu co hop dong/API key rieng.
-- Du lieu hien thi phu thuoc vao cac truong ma endpoint tra ve cho tung ma co phieu.
+- App dùng dữ liệu công khai qua proxy, không phải API chính thức có SLA cho sản phẩm thương mại.
+- Nếu cần sản phẩm ổn định để kinh doanh, nên dùng nhà cung cấp dữ liệu có hợp đồng/API key riêng.
+- Dữ liệu hiển thị phụ thuộc vào các trường mà endpoint trả về cho từng mã cổ phiếu.
